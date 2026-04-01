@@ -1,0 +1,38 @@
+# File Cấu hình UAVLink-Edge-Python (Dành riêng cho Pi 5)
+
+# -- Định danh Drone (Identity) --
+auth:
+    enabled: true
+    host: "45.117.171.237"
+    port: 5770
+    uuid: "00000028-0000-0000-0000-000000000028" # UUID định danh của Drone
+    shared_secret: "drone-fleet-shared-secret-auth-key-2025"
+    keepalive_interval: 30
+
+# -- Cấu hình cổng MAVLink (Kết nối với Pixhawk) --
+# connection_type có thể là: "serial", "tcp_listen", "tcp_client", "udp_listen"
+mavlink:
+    connection_type: "serial" # Các giá trị: "serial", "tcp_listen", "tcp_client", v.v.
+    
+    # Cấu hình cho UART / Serial
+    serial_port: "/dev/ttyAMA0" # Ví dụ: "/dev/ttyUSB0" hoặc "/dev/ttyAMA0" trên Pi
+    serial_baud: 57600
+    
+    # Cấu hình cho TCP
+    tcp_host: "0.0.0.0" # Sử dụng cho "tcp_listen" (udpin)
+    tcp_port: 14540     # Cổng cho luồng dữ liệu mavlink
+    
+# -- Cấu hình Forwarding lên Fleet Server (Dữ liệu server) --
+forwarding:
+    target_host: "10.8.0.1"
+    target_port: 14550
+    protocol: "udp"
+
+# -- Giao diện giám sát Web --
+web:
+    port: 8080
+
+# -- Cấu hình Log --
+log:
+    level: "info"
+    verbose: false
