@@ -6,6 +6,7 @@ from config import Config
 from auth_client import AuthClient
 from forwarder import Forwarder
 from web_server import start_server
+from video_streamer import VideoStreamer
 
 # Set up logging
 logging.basicConfig(
@@ -15,10 +16,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MAIN")
 
-import argparse
+video_streamer = None
 
 def signal_handler(sig, frame):
     logger.info("👋 Shutting down...")
+    if video_streamer:
+        video_streamer.stop()
     sys.exit(0)
 
 def main():
@@ -76,6 +79,11 @@ def main():
     if not fwd.start():
         logger.fatal("Failed to start forwarder")
         sys.exit(1)
+
+    # Start Video Stream
+    global video_streamer
+    video_streamer = VideoStreamer(cfg)
+    video_streamer.start()
 
     logger.info("UAVLink-Edge running. Press Ctrl+C to stop.")
     

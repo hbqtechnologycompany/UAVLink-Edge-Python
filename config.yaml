@@ -32,6 +32,18 @@ forwarding:
 web:
     port: 8080
 
+# -- Cấu hình truyền Video Stream (H.264) --
+video:
+    # source: "picamera" (Pi Cam Module 3) hoặc "usb"
+    source: "picamera"
+    mediamtx_rtsp: "rtsp://45.117.171.237:8554"
+    stream_name: "drone28" # Thường trùng với drone_uuid hoặc tên hiển thị
+    usb_device: "/dev/video0"
+    width: 1280
+    height: 720
+    fps: 30
+    bitrate_kbps: 2000
+
 # -- Cấu hình Log --
 log:
     level: "info"

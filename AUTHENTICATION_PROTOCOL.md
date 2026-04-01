@@ -11,7 +11,7 @@ Quá trình xác thực là một quy trình bắt tay thử thách-phản hồi
 ### 🔄 Giản đồ luồng bắt tay (Handshake Flow)
 
 ```mermaid
-sequence_diagram
+sequenceDiagram
     participant Drone as UAVLink-Edge (Drone)
     participant Server as Fleet Router (Server)
 

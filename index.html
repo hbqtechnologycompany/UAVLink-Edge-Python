@@ -180,7 +180,7 @@ body::before {
 
 /* ─── HERO ─── */
 .hero {
-  padding: 80px 64px 64px;
+  padding: 80px 72px 64px;
   border-bottom: 1px solid var(--border);
   position: relative;
   overflow: hidden;
@@ -315,13 +315,14 @@ span[data-lang], a[data-lang] { display: none; }
 
 /* ─── CONTENT ─── */
 .content {
-  padding: 64px;
-  max-width: 900px;
+  padding: 64px 72px;
+  max-width: 100%;
 }
 
 /* ─── SECTION ─── */
 .section {
-  margin-bottom: 80px;
+  margin-bottom: 88px;
+  max-width: 1200px;
 }
 
 .section-title {
@@ -370,7 +371,7 @@ span[data-lang], a[data-lang] { display: none; }
 /* ─── ROUTE CARDS ─── */
 .route-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
   margin-bottom: 32px;
 }
@@ -673,6 +674,36 @@ span[data-lang], a[data-lang] { display: none; }
 .arch-diagram .arch-note { color: var(--amber); }
 .arch-diagram .arch-line { color: var(--dim); }
 
+/* ─── SVG BLOCK DIAGRAMS ─── */
+.svg-diagram {
+  width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: var(--radius-lg);
+  background: #0c1018;
+  border: 1px solid var(--border);
+  padding: 8px 0;
+}
+.svg-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Two-column layout for subsection + diagram side-by-side */
+.section-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+.section-split.wide { grid-template-columns: 2fr 3fr; }
+.section-split.flip { direction: rtl; }
+.section-split.flip > * { direction: ltr; }
+@media (max-width: 1100px) {
+  .section-split { grid-template-columns: 1fr; }
+}
+
 /* ─── DIVIDER ─── */
 .divider {
   height: 1px;
@@ -710,6 +741,7 @@ span[data-lang], a[data-lang] { display: none; }
   .main { margin-left: 0; }
   .hero { padding: 40px 24px; }
   .content { padding: 32px 24px; }
+  .section { max-width: 100%; }
 }
 
 /* ─── ANIMATIONS ─── */
@@ -875,27 +907,123 @@ code.inline {
         <span data-lang="en">UAVLink-Edge runs on a companion computer (typically Raspberry Pi), bridging the flight controller and the qcloudstation cloud server.</span>
       </p>
 
-      <div class="arch-diagram"><span class="arch-h">┌─────────────────────────────────────────────────────────────────┐</span>
-<span class="arch-h">│                    LUỒNG DỮ LIỆU TỔNG QUAN                      │</span>
-<span class="arch-h">└─────────────────────────────────────────────────────────────────┘</span>
+      <div class="svg-diagram">
+<svg viewBox="0 0 1100 340" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
 
-<span class="arch-box">  [Flight Controller]</span>   <span class="arch-line">──Serial/UART/UDP──►</span>   <span class="arch-box">[UAVLink-Edge.py]</span>
-<span class="arch-note">   Pixhawk / Custom FC                                 Raspberry Pi</span>
+<!-- ── Flight Controller block ── -->
+<rect x="20" y="100" width="170" height="130" rx="12" fill="#111827" stroke="#374151" stroke-width="1"/>
+<rect x="20" y="100" width="170" height="4" rx="12" fill="#00d4aa" opacity="0.7"/>
+<text x="105" y="132" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">Flight Controller</text>
+<text x="105" y="150" text-anchor="middle" fill="#6b7280" font-size="10">Pixhawk / Cube</text>
+<rect x="40" y="162" width="130" height="24" rx="5" fill="#0a2e1a" stroke="#00d4aa" stroke-width="0.5"/>
+<text x="105" y="178" text-anchor="middle" fill="#00d4aa" font-size="10">MAVLink stream</text>
+<rect x="40" y="192" width="130" height="24" rx="5" fill="#1a1a2e" stroke="#7c6bff" stroke-width="0.5"/>
+<text x="105" y="208" text-anchor="middle" fill="#7c6bff" font-size="10">RC + Sensor data</text>
 
-                                                   │  auth_client.py
-                                                   │  TCP :5770 ──► HMAC Handshake
-                                                   │  ◄── Session Token
-                                                   │
-                                                   │  forwarder.py
-                                                   │  UDP :14550 ──► MAVLink frames
-                                                   │  ◄── Commands (ARM/DISARM/...)
-                                                   │
-                                                   │  heartbeat_loop
-                                                   │  UDP 1Hz ──► MSG_SESSION_REFRESH
+<!-- label -->
+<text x="105" y="88" text-anchor="middle" fill="#6b7280" font-size="10" letter-spacing="0.08em">HARDWARE LAYER</text>
 
-<span class="arch-box">  [qcloudstation]</span>        <span class="arch-line">◄────────────────────</span>   <span class="arch-box">[Hybrid Router]</span>
-<span class="arch-note">   Fleet Dashboard UI           Redis Pub/Sub            Go server</span>
-<span class="arch-note">   http://qcloudcontrol.com     TCP :5760 (QGC)          :8001 WebSocket</span></div>
+<!-- ── Connector FC → Pi ── -->
+<line x1="190" y1="165" x2="270" y2="165" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+<text x="230" y="157" text-anchor="middle" fill="#6b7280" font-size="9">UART/USB</text>
+
+<!-- ── Pi / UAVLink-Edge block ── -->
+<rect x="270" y="60" width="220" height="220" rx="12" fill="#0f1923" stroke="#1e3a5f" stroke-width="1"/>
+<rect x="270" y="60" width="220" height="4" rx="12" fill="#38bdf8" opacity="0.8"/>
+<text x="380" y="92" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">UAVLink-Edge</text>
+<text x="380" y="108" text-anchor="middle" fill="#6b7280" font-size="10">Raspberry Pi 5</text>
+
+<rect x="290" y="118" width="180" height="30" rx="6" fill="#0c2030" stroke="#1e4060" stroke-width="0.5"/>
+<text x="380" y="131" text-anchor="middle" fill="#7dd3fc" font-size="10" font-weight="600">auth_client.py</text>
+<text x="380" y="143" text-anchor="middle" fill="#4b7a8a" font-size="9">TCP :5770 · HMAC-SHA256</text>
+
+<rect x="290" y="156" width="180" height="30" rx="6" fill="#0c2030" stroke="#1e4060" stroke-width="0.5"/>
+<text x="380" y="169" text-anchor="middle" fill="#7dd3fc" font-size="10" font-weight="600">forwarder.py</text>
+<text x="380" y="181" text-anchor="middle" fill="#4b7a8a" font-size="9">UDP :14550 · MAVLink frames</text>
+
+<rect x="290" y="194" width="180" height="30" rx="6" fill="#0c2030" stroke="#1e4060" stroke-width="0.5"/>
+<text x="380" y="207" text-anchor="middle" fill="#7dd3fc" font-size="10" font-weight="600">heartbeat_loop</text>
+<text x="380" y="219" text-anchor="middle" fill="#4b7a8a" font-size="9">SESSION_REFRESH · 1 Hz</text>
+
+<rect x="290" y="232" width="180" height="30" rx="6" fill="#0c2030" stroke="#1e4060" stroke-width="0.5"/>
+<text x="380" y="245" text-anchor="middle" fill="#7dd3fc" font-size="10" font-weight="600">web_server.py</text>
+<text x="380" y="257" text-anchor="middle" fill="#4b7a8a" font-size="9">Flask /api/status :8080</text>
+
+<!-- ── Connector Pi → Router ── -->
+<!-- TCP auth -->
+<line x1="490" y1="135" x2="580" y2="155" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="528" y="135" text-anchor="middle" fill="#38bdf8" font-size="9">TCP :5770</text>
+<!-- UDP telemetry -->
+<line x1="490" y1="175" x2="580" y2="200" stroke="#00d4aa" stroke-width="2" marker-end="url(#arr)"/>
+<text x="528" y="173" text-anchor="middle" fill="#00d4aa" font-size="9">UDP :14550</text>
+<!-- heartbeat -->
+<line x1="490" y1="210" x2="580" y2="230" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arr)"/>
+<text x="533" y="222" text-anchor="middle" fill="#f59e0b" font-size="9">heartbeat</text>
+
+<!-- ── Hybrid Router block ── -->
+<rect x="580" y="100" width="200" height="180" rx="12" fill="#111827" stroke="#374151" stroke-width="1"/>
+<rect x="580" y="100" width="200" height="4" rx="12" fill="#a78bfa" opacity="0.8"/>
+<text x="680" y="132" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">Hybrid Router</text>
+<text x="680" y="148" text-anchor="middle" fill="#6b7280" font-size="10">Go server</text>
+
+<rect x="598" y="158" width="164" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="680" y="173" text-anchor="middle" fill="#a78bfa" font-size="10">Session Manager</text>
+<rect x="598" y="186" width="164" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="680" y="201" text-anchor="middle" fill="#a78bfa" font-size="10">Packet Router Core</text>
+<rect x="598" y="214" width="164" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="680" y="229" text-anchor="middle" fill="#a78bfa" font-size="10">Redis Pub/Sub</text>
+<rect x="598" y="242" width="164" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="680" y="257" text-anchor="middle" fill="#a78bfa" font-size="10">WS :8000–8003</text>
+
+<!-- ── Connector Router → Backend ── -->
+<line x1="780" y1="190" x2="860" y2="190" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="820" y="183" text-anchor="middle" fill="#6b7280" font-size="9">Redis</text>
+
+<!-- ── Backend block ── -->
+<rect x="860" y="120" width="180" height="130" rx="12" fill="#111827" stroke="#374151" stroke-width="1"/>
+<rect x="860" y="120" width="180" height="4" rx="12" fill="#f59e0b" opacity="0.8"/>
+<text x="950" y="150" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">Backend</text>
+<text x="950" y="166" text-anchor="middle" fill="#6b7280" font-size="10">Go / Gin · :8081</text>
+<rect x="878" y="176" width="144" height="22" rx="5" fill="#1f1200" stroke="#92400e" stroke-width="0.5"/>
+<text x="950" y="191" text-anchor="middle" fill="#fbbf24" font-size="10">REST API + JWT</text>
+<rect x="878" y="204" width="144" height="22" rx="5" fill="#1f1200" stroke="#92400e" stroke-width="0.5"/>
+<text x="950" y="219" text-anchor="middle" fill="#fbbf24" font-size="10">PostgreSQL</text>
+<rect x="878" y="232" width="144" height="22" rx="5" fill="#1f1200" stroke="#92400e" stroke-width="0.5"/>
+<text x="950" y="247" text-anchor="middle" fill="#fbbf24" font-size="10">WebSocket hub</text>
+
+<!-- ── Connector Backend → Frontend ── -->
+<path d="M950 120 L950 60 L1060 60" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+
+<!-- ── Frontend block ── -->
+<rect x="1060" y="30" width="30" height="170" rx="8" fill="#111827" stroke="#374151" stroke-width="1"/>
+<rect x="1060" y="30" width="30" height="4" rx="8" fill="#34d399" opacity="0.8"/>
+<text x="1075" y="125" text-anchor="middle" fill="#34d399" font-size="10" transform="rotate(-90,1075,125)" font-weight="600">Frontend :8080</text>
+
+<!-- ── Command downlink arrow ── -->
+<path d="M1060 120 L980 120 L980 120" fill="none" stroke="#34d399" stroke-width="1" marker-end="url(#arr)" opacity="0.5"/>
+<text x="1020" y="112" text-anchor="middle" fill="#34d399" font-size="8">commands</text>
+
+<!-- Labels bottom -->
+<text x="680" y="88" text-anchor="middle" fill="#6b7280" font-size="10" letter-spacing="0.08em">SERVER LAYER · qcloudstation</text>
+<text x="950" y="108" text-anchor="middle" fill="#6b7280" font-size="10" letter-spacing="0.08em">CONTROL PLANE</text>
+
+<!-- Legend -->
+<circle cx="30" cy="316" r="4" fill="#00d4aa"/>
+<text x="42" y="320" fill="#6b7280" font-size="10">MAVLink UDP</text>
+<circle cx="130" cy="316" r="4" fill="#38bdf8"/>
+<text x="142" y="320" fill="#6b7280" font-size="10">Auth TCP</text>
+<circle cx="215" cy="316" r="4" fill="#f59e0b"/>
+<text x="227" y="320" fill="#6b7280" font-size="10">Heartbeat</text>
+<circle cx="305" cy="316" r="4" fill="#a78bfa"/>
+<text x="317" y="320" fill="#6b7280" font-size="10">Redis Pub/Sub</text>
+</svg>
+      </div>
 
       <div class="callout info">
         <div class="callout-icon">ℹ</div>
@@ -932,7 +1060,70 @@ code.inline {
         </tbody>
       </table>
 
-      <div class="subsection">
+      <div class="svg-diagram">
+<svg viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- Drone lane -->
+<rect x="20" y="20" width="130" height="36" rx="8" fill="#0c1928" stroke="#3b82f6" stroke-width="1.2"/>
+<text x="85" y="35" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="600">UAVLink-Edge</text>
+<text x="85" y="49" text-anchor="middle" fill="#6b7280" font-size="9">Pi · auth_client.py</text>
+<line x1="85" y1="56" x2="85" y2="268" stroke="#3b82f6" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.4"/>
+
+<!-- Server lane -->
+<rect x="670" y="20" width="130" height="36" rx="8" fill="#1a0a2e" stroke="#6d28d9" stroke-width="1.2"/>
+<text x="735" y="35" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">Hybrid Router</text>
+<text x="735" y="49" text-anchor="middle" fill="#6b7280" font-size="9">qcloudstation · Go</text>
+<line x1="735" y1="56" x2="735" y2="268" stroke="#6d28d9" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.4"/>
+
+<!-- Step 1: AUTH_INIT -->
+<rect x="95" y="68" width="260" height="30" rx="6" fill="#0d1f15" stroke="#00d4aa" stroke-width="0.8"/>
+<text x="225" y="81" text-anchor="middle" fill="#00d4aa" font-size="10" font-weight="600">0x01 AUTH_INIT</text>
+<text x="225" y="92" text-anchor="middle" fill="#4b7280" font-size="9">[UUID_LEN:2][UUID:var]</text>
+<line x1="85" y1="83" x2="94" y2="83" stroke="#00d4aa" stroke-width="1.5"/>
+<line x1="355" y1="83" x2="735" y2="83" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#ah)"/>
+
+<!-- Step 2: AUTH_CHALLENGE -->
+<rect x="465" y="113" width="260" height="30" rx="6" fill="#1a0a2e" stroke="#a78bfa" stroke-width="0.8"/>
+<text x="595" y="126" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="600">0x02 AUTH_CHALLENGE</text>
+<text x="595" y="137" text-anchor="middle" fill="#4b5563" font-size="9">[NONCE_LEN:2][NONCE:var][TIMEOUT:2]</text>
+<line x1="735" y1="128" x2="726" y2="128" stroke="#a78bfa" stroke-width="1.5"/>
+<line x1="85" y1="128" x2="464" y2="128" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ah)"/>
+
+<!-- Compute note -->
+<rect x="30" y="150" width="210" height="24" rx="5" fill="#1a1008" stroke="#f59e0b" stroke-width="0.6"/>
+<text x="135" y="162" text-anchor="middle" fill="#fbbf24" font-size="9">combined = SHA256(secret_key + shared)</text>
+<text x="135" y="172" text-anchor="middle" fill="#78350f" font-size="8">HMAC-SHA256(combined, nonce)</text>
+
+<!-- Step 3: AUTH_RESPONSE -->
+<rect x="95" y="186" width="300" height="30" rx="6" fill="#0d1f15" stroke="#00d4aa" stroke-width="0.8"/>
+<text x="245" y="199" text-anchor="middle" fill="#00d4aa" font-size="10" font-weight="600">0x03 AUTH_RESPONSE</text>
+<text x="245" y="210" text-anchor="middle" fill="#4b7280" font-size="9">[UUID][HMAC:32][TIMESTAMP:8][IP]</text>
+<line x1="85" y1="201" x2="94" y2="201" stroke="#00d4aa" stroke-width="1.5"/>
+<line x1="395" y1="201" x2="735" y2="201" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#ah)"/>
+
+<!-- Step 4: AUTH_ACK -->
+<rect x="430" y="232" width="290" height="30" rx="6" fill="#1a0a2e" stroke="#4ade80" stroke-width="1"/>
+<text x="575" y="245" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="600">0x04 AUTH_ACK ✓</text>
+<text x="575" y="256" text-anchor="middle" fill="#4b5563" font-size="9">[RESULT:1][TOKEN:var][EXP:8][INT:2]</text>
+<line x1="735" y1="247" x2="721" y2="247" stroke="#4ade80" stroke-width="1.5"/>
+<line x1="85" y1="247" x2="429" y2="247" stroke="#4ade80" stroke-width="1.5" marker-end="url(#ah)"/>
+
+<!-- Step numbers -->
+<circle cx="400" cy="83" r="10" fill="#0d1f15" stroke="#00d4aa" stroke-width="0.8"/>
+<text x="400" y="87" text-anchor="middle" fill="#00d4aa" font-size="9">1</text>
+<circle cx="420" cy="128" r="10" fill="#1a0a2e" stroke="#a78bfa" stroke-width="0.8"/>
+<text x="420" y="132" text-anchor="middle" fill="#a78bfa" font-size="9">2</text>
+<circle cx="415" cy="201" r="10" fill="#0d1f15" stroke="#00d4aa" stroke-width="0.8"/>
+<text x="415" y="205" text-anchor="middle" fill="#00d4aa" font-size="9">3</text>
+<circle cx="415" cy="247" r="10" fill="#1a0a2e" stroke="#4ade80" stroke-width="0.8"/>
+<text x="415" y="251" text-anchor="middle" fill="#4ade80" font-size="9">4</text>
+
+<!-- TCP label -->
+<rect x="340" y="20" width="140" height="22" rx="5" fill="#0a0f1a" stroke="#374151" stroke-width="0.5"/>
+<text x="410" y="35" text-anchor="middle" fill="#6b7280" font-size="9">TCP :5770 channel</text>
+</svg>
+      </div>
         <div class="subsection-title">🔑 Công thức HMAC (source of truth: auth_client.py)</div>
         <div class="code-block">
           <div class="code-header"><span class="code-lang">Python</span><span class="code-file">auth_client.py → authenticate()</span></div>
@@ -986,7 +1177,7 @@ signature = hmac.new(combined_key, nonce, hashlib.sha256).digest()
           <div class="step-num teal">2</div>
           <div class="step-content">
             <strong><span data-lang="vi">Xin credentials từ qcloudstation</span><span data-lang="en">Request credentials from qcloudstation</span></strong>
-            <span><span data-lang="vi">Email <code class="inline">hbqsolution@gmail.com</code> để nhận <code class="inline">shared_secret</code> và <code class="inline">uuid</code> cho drone của bạn.</span><span data-lang="en">Email <code class="inline">hbqsolution@gmail.com</code> to receive your drone's <code class="inline">shared_secret</code> and <code class="inline">uuid</code>.</span></span>
+            <span><span data-lang="vi">Email <code class="inline"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6a02081b1905061f1e0305042a0d070b030644090507">[email&#160;protected]</a></code> để nhận <code class="inline">shared_secret</code> và <code class="inline">uuid</code> cho drone của bạn.</span><span data-lang="en">Email <code class="inline"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a1c9c3d0d2cecdd4d5c8cecfe1c6ccc0c8cd8fc2cecc">[email&#160;protected]</a></code> to receive your drone's <code class="inline">shared_secret</code> and <code class="inline">uuid</code>.</span></span>
           </div>
         </li>
         <li>
@@ -1086,16 +1277,87 @@ signature = hmac.new(combined_key, nonce, hashlib.sha256).digest()
       <div class="section-title">Route 1 — Pixhawk / ArduPilot / PX4 <a href="#route-1" class="anchor-link">#</a></div>
       <p class="section-desc">Hướng dễ nhất. FC nói MAVLink native, repo đã xử lý toàn bộ.</p>
 
-      <div class="subsection">
-        <div class="subsection-title">Sơ đồ kết nối</div>
-        <div class="arch-diagram"><span class="arch-box">  Pixhawk 6C</span>                <span class="arch-box">Raspberry Pi 5</span>
-  <span class="arch-note">TELEM2 port</span>
-       │                          │
-       │ UART (TX→RX, RX→TX)     │
-       └──────────────────────────┘  <span class="arch-note">/dev/ttyAMA0 @ 57600</span>
-                                 │
-                          main.py ─── auth_client.py (TCP:5770)
-                                 └── forwarder.py (UDP:14550)</div>
+      <div class="section-split wide">
+        <div>
+          <div class="subsection-title"><span data-lang="vi">Sơ đồ kết nối</span><span data-lang="en">Connection diagram</span></div>
+          <p style="color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:16px">
+            <span data-lang="vi">FC nối UART với Pi qua cổng TELEM2. Pi chạy forwarder.py đọc MAVLink và forward thẳng lên server. Không cần code thêm — chỉ sửa config.yaml.</span>
+            <span data-lang="en">FC connects via UART to Pi through TELEM2. Pi runs forwarder.py reading MAVLink and forwarding directly to server. No extra code — just edit config.yaml.</span>
+          </p>
+        </div>
+        <div class="svg-diagram">
+<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- Pixhawk -->
+<rect x="20" y="60" width="140" height="130" rx="10" fill="#0d1f15" stroke="#00d4aa" stroke-width="1"/>
+<rect x="20" y="60" width="140" height="4" rx="10" fill="#00d4aa"/>
+<text x="90" y="85" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Pixhawk 6C</text>
+<rect x="35" y="96" width="110" height="20" rx="4" fill="#0a1f10" stroke="#00d4aa" stroke-width="0.5"/>
+<text x="90" y="110" text-anchor="middle" fill="#00d4aa" font-size="10">ArduPilot / PX4</text>
+<rect x="35" y="122" width="110" height="20" rx="4" fill="#0a1f10" stroke="#00d4aa" stroke-width="0.5"/>
+<text x="90" y="136" text-anchor="middle" fill="#00d4aa" font-size="10">MAVLink output</text>
+<rect x="35" y="148" width="110" height="20" rx="4" fill="#0a1f10" stroke="#00d4aa" stroke-width="0.5"/>
+<text x="90" y="162" text-anchor="middle" fill="#00d4aa" font-size="10">TELEM2 port</text>
+<!-- drone illustration -->
+<ellipse cx="90" cy="218" rx="28" ry="10" fill="none" stroke="#00d4aa" stroke-width="0.8" opacity="0.5"/>
+<line x1="62" y1="218" x2="48" y2="208" stroke="#00d4aa" stroke-width="1" opacity="0.5"/>
+<line x1="118" y1="218" x2="132" y2="208" stroke="#00d4aa" stroke-width="1" opacity="0.5"/>
+<circle cx="48" cy="205" r="6" fill="none" stroke="#00d4aa" stroke-width="1" opacity="0.5"/>
+<circle cx="132" cy="205" r="6" fill="none" stroke="#00d4aa" stroke-width="1" opacity="0.5"/>
+<rect x="78" y="210" width="24" height="14" rx="3" fill="#0d1f15" stroke="#00d4aa" stroke-width="0.8" opacity="0.6"/>
+<text x="90" y="240" text-anchor="middle" fill="#4b7280" font-size="9">Drone</text>
+
+<!-- UART wire -->
+<line x1="160" y1="138" x2="210" y2="138" stroke="#00d4aa" stroke-width="2" marker-end="url(#a1)"/>
+<text x="185" y="130" text-anchor="middle" fill="#6b7280" font-size="9">UART</text>
+<text x="185" y="150" text-anchor="middle" fill="#00d4aa" font-size="9">57600</text>
+
+<!-- Pi -->
+<rect x="210" y="40" width="160" height="190" rx="10" fill="#0c1928" stroke="#3b82f6" stroke-width="1"/>
+<rect x="210" y="40" width="160" height="4" rx="10" fill="#3b82f6"/>
+<text x="290" y="65" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Raspberry Pi 5</text>
+<text x="290" y="80" text-anchor="middle" fill="#6b7280" font-size="10">UAVLink-Edge.py</text>
+<rect x="225" y="90" width="130" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="290" y="105" text-anchor="middle" fill="#7dd3fc" font-size="10">config.yaml</text>
+<rect x="225" y="118" width="130" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="290" y="133" text-anchor="middle" fill="#7dd3fc" font-size="10">auth_client.py</text>
+<rect x="225" y="146" width="130" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="290" y="161" text-anchor="middle" fill="#7dd3fc" font-size="10">forwarder.py</text>
+<rect x="225" y="174" width="130" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="290" y="189" text-anchor="middle" fill="#7dd3fc" font-size="10">web_server.py</text>
+<!-- Pi board illustration -->
+<rect x="240" y="210" width="100" height="16" rx="3" fill="#0a1828" stroke="#3b82f6" stroke-width="0.5"/>
+<circle cx="248" cy="218" r="3" fill="#3b82f6" opacity="0.4"/>
+<circle cx="258" cy="218" r="3" fill="#3b82f6" opacity="0.4"/>
+<text x="290" y="242" text-anchor="middle" fill="#4b7280" font-size="9">/dev/ttyAMA0</text>
+
+<!-- TCP auth -->
+<path d="M370 100 Q410 100 420 100" fill="none" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#a1)" stroke-dasharray="4 2"/>
+<text x="412" y="93" text-anchor="middle" fill="#38bdf8" font-size="9">TCP :5770</text>
+<!-- UDP -->
+<line x1="370" y1="160" x2="420" y2="160" stroke="#00d4aa" stroke-width="2" marker-end="url(#a1)"/>
+<text x="412" y="153" text-anchor="middle" fill="#00d4aa" font-size="9">UDP :14550</text>
+<!-- heartbeat back -->
+<line x1="420" y1="180" x2="370" y2="180" stroke="#f59e0b" stroke-width="1" marker-end="url(#a1)" stroke-dasharray="3 2" opacity="0.7"/>
+<text x="395" y="197" text-anchor="middle" fill="#f59e0b" font-size="9">CMD ↓</text>
+
+<!-- Server block -->
+<rect x="420" y="60" width="160" height="130" rx="10" fill="#111827" stroke="#6d28d9" stroke-width="1"/>
+<rect x="420" y="60" width="160" height="4" rx="10" fill="#6d28d9"/>
+<text x="500" y="85" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">qcloudstation</text>
+<rect x="436" y="96" width="128" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="500" y="111" text-anchor="middle" fill="#a78bfa" font-size="10">Hybrid Router</text>
+<rect x="436" y="124" width="128" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="500" y="139" text-anchor="middle" fill="#a78bfa" font-size="10">Backend + DB</text>
+<rect x="436" y="152" width="128" height="22" rx="5" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="500" y="167" text-anchor="middle" fill="#a78bfa" font-size="10">Web Dashboard</text>
+
+<!-- Difficulty badge -->
+<rect x="20" y="20" width="60" height="20" rx="5" fill="rgba(0,212,170,0.1)" stroke="rgba(0,212,170,0.3)" stroke-width="0.5"/>
+<text x="50" y="34" text-anchor="middle" fill="#00d4aa" font-size="10">★☆☆ Easy</text>
+</svg>
+        </div>
       </div>
 
       <div class="subsection">
@@ -1139,18 +1401,146 @@ forwarding:
       <div class="section-title">Route 2 — MAVLink Emitter tùy chỉnh <a href="#route-2" class="anchor-link">#</a></div>
       <p class="section-desc">Cho Arduino, ESP32, STM32 — bất kỳ MCU nào không native MAVLink. Viết emitter Python chạy cùng trên Pi, giả lập một FC chuẩn.</p>
 
+      <div class="svg-diagram">
+<svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- Hardware MCU -->
+<rect x="20" y="50" width="130" height="140" rx="10" fill="#0d1520" stroke="#7c6bff" stroke-width="1"/>
+<rect x="20" y="50" width="130" height="4" rx="10" fill="#7c6bff"/>
+<text x="85" y="74" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Custom MCU</text>
+<text x="85" y="89" text-anchor="middle" fill="#6b7280" font-size="10">ESP32 / Arduino</text>
+<rect x="35" y="100" width="100" height="20" rx="4" fill="#120d2e" stroke="#7c6bff" stroke-width="0.5"/>
+<text x="85" y="114" text-anchor="middle" fill="#a78bfa" font-size="10">IMU / GPS</text>
+<rect x="35" y="126" width="100" height="20" rx="4" fill="#120d2e" stroke="#7c6bff" stroke-width="0.5"/>
+<text x="85" y="140" text-anchor="middle" fill="#a78bfa" font-size="10">Motors / Servos</text>
+<rect x="35" y="152" width="100" height="20" rx="4" fill="#120d2e" stroke="#7c6bff" stroke-width="0.5"/>
+<text x="85" y="166" text-anchor="middle" fill="#a78bfa" font-size="10">Custom sensors</text>
+<!-- chip illustration -->
+<rect x="55" y="196" width="60" height="30" rx="4" fill="#120d2e" stroke="#7c6bff" stroke-width="0.8"/>
+<text x="85" y="215" text-anchor="middle" fill="#7c6bff" font-size="9">MCU</text>
+
+<!-- arrow Serial/WiFi -->
+<line x1="150" y1="120" x2="210" y2="120" stroke="#7c6bff" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="180" y="112" text-anchor="middle" fill="#6b7280" font-size="9">Serial/WiFi</text>
+<text x="180" y="135" text-anchor="middle" fill="#7c6bff" font-size="9">raw data</text>
+
+<!-- Pi with emitter -->
+<rect x="210" y="30" width="200" height="200" rx="10" fill="#0c1928" stroke="#3b82f6" stroke-width="1"/>
+<rect x="210" y="30" width="200" height="4" rx="10" fill="#3b82f6"/>
+<text x="310" y="55" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Raspberry Pi 5</text>
+<rect x="225" y="65" width="170" height="28" rx="5" fill="#0f2040" stroke="#f59e0b" stroke-width="1"/>
+<text x="310" y="78" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">mavlink_emitter.py</text>
+<text x="310" y="89" text-anchor="middle" fill="#92400e" font-size="9">NEW · reads hw, emits MAVLink UDP</text>
+<rect x="225" y="100" width="170" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="310" y="115" text-anchor="middle" fill="#7dd3fc" font-size="10">auth_client.py</text>
+<rect x="225" y="128" width="170" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="310" y="143" text-anchor="middle" fill="#7dd3fc" font-size="10">forwarder.py (udp_listen)</text>
+<rect x="225" y="156" width="170" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="310" y="171" text-anchor="middle" fill="#7dd3fc" font-size="10">web_server.py</text>
+<!-- internal UDP arrow -->
+<rect x="245" y="186" width="130" height="18" rx="4" fill="#0a1828" stroke="#4b7280" stroke-width="0.5" stroke-dasharray="3 2"/>
+<text x="310" y="199" text-anchor="middle" fill="#4b7280" font-size="9">internal UDP 127.0.0.1:14540</text>
+
+<!-- arrow to server -->
+<line x1="410" y1="110" x2="470" y2="110" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#a2)" stroke-dasharray="4 2"/>
+<text x="440" y="102" text-anchor="middle" fill="#38bdf8" font-size="9">TCP :5770</text>
+<line x1="410" y1="145" x2="470" y2="145" stroke="#00d4aa" stroke-width="2" marker-end="url(#a2)"/>
+<text x="440" y="160" text-anchor="middle" fill="#00d4aa" font-size="9">UDP :14550</text>
+
+<!-- MAVLink messages box -->
+<rect x="470" y="50" width="150" height="130" rx="10" fill="#0d1520" stroke="#374151" stroke-width="1"/>
+<rect x="470" y="50" width="150" height="4" rx="10" fill="#374151"/>
+<text x="545" y="74" text-anchor="middle" fill="#9ca3af" font-size="11" font-weight="600">MAVLink msgs</text>
+<text x="545" y="92" text-anchor="middle" fill="#00d4aa" font-size="10">HEARTBEAT · 1Hz</text>
+<text x="545" y="110" text-anchor="middle" fill="#00d4aa" font-size="10">ATTITUDE · 10Hz</text>
+<text x="545" y="128" text-anchor="middle" fill="#00d4aa" font-size="10">GPS_RAW_INT · 5Hz</text>
+<text x="545" y="146" text-anchor="middle" fill="#00d4aa" font-size="10">BATTERY_STATUS · 1Hz</text>
+<text x="545" y="164" text-anchor="middle" fill="#6b7280" font-size="10">+ custom messages</text>
+
+<!-- arrow to cloud -->
+<line x1="620" y1="115" x2="680" y2="115" stroke="#a78bfa" stroke-width="2" marker-end="url(#a2)"/>
+
+<!-- Cloud -->
+<rect x="680" y="80" width="60" height="70" rx="10" fill="#1a0a2e" stroke="#6d28d9" stroke-width="1"/>
+<text x="710" y="120" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="600">Cloud</text>
+<text x="710" y="135" text-anchor="middle" fill="#6b7280" font-size="9">qcs</text>
+
+<!-- Badge -->
+<rect x="20" y="16" width="75" height="20" rx="5" fill="rgba(124,107,255,0.1)" stroke="rgba(124,107,255,0.3)" stroke-width="0.5"/>
+<text x="57" y="30" text-anchor="middle" fill="#7c6bff" font-size="10">★★☆ Medium</text>
+</svg>
+      </div>
+
       <div class="subsection">
-        <div class="subsection-title">Kiến trúc</div>
-        <div class="arch-diagram"><span class="arch-box">  Arduino Mega / ESP32</span>     <span class="arch-box">Raspberry Pi 5</span>
-  <span class="arch-note">Custom sensors, motors</span>    ┌──────────────────────────────┐
-       │                        │  mavlink_emitter.py          │
-       │ Serial / I2C / SPI     │  ↑ đọc từ hardware           │
-       └────────────────────────│  ↓ phát MAVLink UDP local   │
-                                │  UDP 127.0.0.1:14540         │
-                                │          ▼                   │
-                                │  forwarder.py (udp_listen)   │
-                                │  auth_client.py (TCP:5770)   │
-                                └──────────────────────────────┘</div>
+        <div class="subsection-title"><span data-lang="vi">Luồng dữ liệu nội bộ</span><span data-lang="en">Internal data flow</span></div>
+        <div class="svg-diagram">
+<svg viewBox="0 0 820 180" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="ai" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- Hardware MCU box -->
+<rect x="20" y="30" width="140" height="120" rx="9" fill="#120d2e" stroke="#7c6bff" stroke-width="1"/>
+<rect x="20" y="30" width="140" height="4" rx="9" fill="#7c6bff"/>
+<text x="90" y="52" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">Custom HW</text>
+<!-- chip icon -->
+<rect x="58" y="62" width="64" height="38" rx="4" fill="#1a1040" stroke="#7c6bff" stroke-width="0.8"/>
+<line x1="58" y1="72" x2="48" y2="72" stroke="#7c6bff" stroke-width="1.2" opacity="0.7"/>
+<line x1="58" y1="82" x2="48" y2="82" stroke="#7c6bff" stroke-width="1.2" opacity="0.7"/>
+<line x1="58" y1="92" x2="48" y2="92" stroke="#7c6bff" stroke-width="1.2" opacity="0.7"/>
+<line x1="122" y1="72" x2="132" y2="72" stroke="#7c6bff" stroke-width="1.2" opacity="0.7"/>
+<line x1="122" y1="82" x2="132" y2="82" stroke="#7c6bff" stroke-width="1.2" opacity="0.7"/>
+<line x1="122" y1="92" x2="132" y2="92" stroke="#7c6bff" stroke-width="1.2" opacity="0.7"/>
+<text x="90" y="85" text-anchor="middle" fill="#7c6bff" font-size="9">ESP32</text>
+<text x="90" y="118" text-anchor="middle" fill="#6b7280" font-size="9">raw sensor data</text>
+
+<!-- arrow to emitter -->
+<line x1="160" y1="90" x2="210" y2="90" stroke="#7c6bff" stroke-width="1.8" marker-end="url(#ai)"/>
+<text x="185" y="82" text-anchor="middle" fill="#6b7280" font-size="9">Serial/WiFi</text>
+
+<!-- emitter box -->
+<rect x="210" y="20" width="160" height="50" rx="8" fill="#1a1040" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="290" y="40" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600">mavlink_emitter.py</text>
+<text x="290" y="56" text-anchor="middle" fill="#92400e" font-size="9">reads HW · encodes MAVLink · 10Hz</text>
+
+<!-- internal UDP arrow down then right -->
+<line x1="290" y1="70" x2="290" y2="110" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#ai)"/>
+<text x="305" y="94" fill="#6b7280" font-size="9">UDP loopback</text>
+<text x="305" y="105" fill="#f59e0b" font-size="9">127.0.0.1:14540</text>
+
+<!-- forwarder box -->
+<rect x="210" y="110" width="160" height="40" rx="8" fill="#0c1928" stroke="#3b82f6" stroke-width="1"/>
+<text x="290" y="128" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="600">forwarder.py</text>
+<text x="290" y="142" text-anchor="middle" fill="#1e4060" font-size="9">udp_listen · reads loopback</text>
+
+<!-- auth box -->
+<rect x="210" y="158" width="160" height="18" rx="5" fill="#0a0f1a" stroke="#374151" stroke-width="0.5"/>
+<text x="290" y="171" text-anchor="middle" fill="#4b5563" font-size="9">auth_client.py  (session gate)</text>
+
+<!-- arrow to messages -->
+<line x1="370" y1="130" x2="430" y2="90" stroke="#00d4aa" stroke-width="2" marker-end="url(#ai)"/>
+
+<!-- messages box -->
+<rect x="430" y="30" width="170" height="120" rx="9" fill="#0d1f15" stroke="#00d4aa" stroke-width="1"/>
+<rect x="430" y="30" width="170" height="4" rx="9" fill="#00d4aa"/>
+<text x="515" y="52" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">MAVLink stream</text>
+<text x="515" y="68" text-anchor="middle" fill="#00d4aa" font-size="9">HEARTBEAT</text>
+<text x="515" y="83" text-anchor="middle" fill="#00d4aa" font-size="9">ATTITUDE</text>
+<text x="515" y="98" text-anchor="middle" fill="#00d4aa" font-size="9">GPS_RAW_INT</text>
+<text x="515" y="113" text-anchor="middle" fill="#00d4aa" font-size="9">BATTERY_STATUS</text>
+<text x="515" y="128" text-anchor="middle" fill="#4b7280" font-size="9">+ RC_CHANNELS_RAW</text>
+
+<!-- arrow to cloud -->
+<line x1="600" y1="90" x2="660" y2="90" stroke="#a78bfa" stroke-width="2" marker-end="url(#ai)"/>
+<text x="630" y="82" text-anchor="middle" fill="#6b7280" font-size="9">UDP :14550</text>
+
+<!-- cloud -->
+<rect x="660" y="55" width="140" height="70" rx="9" fill="#1a0a2e" stroke="#6d28d9" stroke-width="1"/>
+<rect x="660" y="55" width="140" height="4" rx="9" fill="#6d28d9"/>
+<text x="730" y="78" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">qcloudstation</text>
+<text x="730" y="96" text-anchor="middle" fill="#a78bfa" font-size="9">Hybrid Router</text>
+<text x="730" y="112" text-anchor="middle" fill="#a78bfa" font-size="9">Fleet Dashboard</text>
+</svg>
+        </div>
       </div>
 
       <div class="subsection">
@@ -1253,6 +1643,84 @@ forwarding:
       <div class="section-title">Route 3 — ROS2 / MAVROS Bridge <a href="#route-3" class="anchor-link">#</a></div>
       <p class="section-desc">Cho robot dùng ROS2 Humble/Iron. MAVROS chuyển đổi ROS topics → MAVLink messages.</p>
 
+      <div class="svg-diagram">
+<svg viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- ROS2 Robot side -->
+<rect x="20" y="20" width="220" height="180" rx="10" fill="#0f1a0a" stroke="#4ade80" stroke-width="1"/>
+<rect x="20" y="20" width="220" height="4" rx="10" fill="#4ade80"/>
+<text x="130" y="44" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">ROS2 Robot</text>
+<text x="130" y="58" text-anchor="middle" fill="#6b7280" font-size="10">Jetson Orin / PC Ubuntu</text>
+<!-- ROS2 topics -->
+<rect x="35" y="68" width="190" height="22" rx="5" fill="#0a1408" stroke="#4ade80" stroke-width="0.6"/>
+<text x="130" y="83" text-anchor="middle" fill="#4ade80" font-size="10">/imu/data  /gps/fix</text>
+<rect x="35" y="96" width="190" height="22" rx="5" fill="#0a1408" stroke="#4ade80" stroke-width="0.6"/>
+<text x="130" y="111" text-anchor="middle" fill="#4ade80" font-size="10">/battery_state  /odom</text>
+<rect x="35" y="124" width="190" height="22" rx="5" fill="#0a1408" stroke="#4ade80" stroke-width="0.6"/>
+<text x="130" y="139" text-anchor="middle" fill="#4ade80" font-size="10">/cmd_vel  ← commands</text>
+<rect x="35" y="152" width="190" height="22" rx="5" fill="#0a1408" stroke="#22c55e" stroke-width="0.8"/>
+<text x="130" y="162" text-anchor="middle" fill="#86efac" font-size="9" font-weight="600">ros2_command_bridge.py</text>
+<text x="130" y="173" text-anchor="middle" fill="#4b5563" font-size="8">subscribes MAVLink cmds → /cmd_vel</text>
+
+<!-- MAVROS bridge -->
+<rect x="280" y="50" width="150" height="120" rx="10" fill="#0c1a10" stroke="#22c55e" stroke-width="1.2"/>
+<rect x="280" y="50" width="150" height="4" rx="10" fill="#22c55e"/>
+<text x="355" y="72" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">MAVROS</text>
+<text x="355" y="86" text-anchor="middle" fill="#6b7280" font-size="9">ros-humble-mavros</text>
+<rect x="294" y="96" width="122" height="20" rx="4" fill="#0a1408" stroke="#22c55e" stroke-width="0.5"/>
+<text x="355" y="110" text-anchor="middle" fill="#4ade80" font-size="9">ROS2 → MAVLink</text>
+<rect x="294" y="122" width="122" height="20" rx="4" fill="#0a1408" stroke="#22c55e" stroke-width="0.5"/>
+<text x="355" y="136" text-anchor="middle" fill="#4ade80" font-size="9">MAVLink → ROS2</text>
+<text x="355" y="158" text-anchor="middle" fill="#6b7280" font-size="9">fcu_url UDP bridge</text>
+
+<!-- arrows ROS2 ↔ MAVROS -->
+<line x1="240" y1="95" x2="280" y2="100" stroke="#4ade80" stroke-width="1.5" marker-end="url(#a3)"/>
+<line x1="280" y1="140" x2="240" y2="145" stroke="#22c55e" stroke-width="1.5" marker-end="url(#a3)"/>
+
+<!-- UAVLink-Edge -->
+<rect x="470" y="30" width="170" height="160" rx="10" fill="#0c1928" stroke="#3b82f6" stroke-width="1"/>
+<rect x="470" y="30" width="170" height="4" rx="10" fill="#3b82f6"/>
+<text x="555" y="52" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">UAVLink-Edge</text>
+<text x="555" y="65" text-anchor="middle" fill="#6b7280" font-size="10">Pi 5 or same host</text>
+<rect x="484" y="76" width="142" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="555" y="91" text-anchor="middle" fill="#7dd3fc" font-size="10">forwarder.py</text>
+<text x="555" y="103" text-anchor="middle" fill="#4b5563" font-size="9">udp_listen :14540</text>
+<rect x="484" y="110" width="142" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="555" y="125" text-anchor="middle" fill="#7dd3fc" font-size="10">auth_client.py</text>
+<rect x="484" y="138" width="142" height="22" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="555" y="153" text-anchor="middle" fill="#7dd3fc" font-size="10">heartbeat_loop</text>
+<rect x="484" y="166" width="142" height="18" rx="5" fill="#0a1408" stroke="#4ade80" stroke-width="0.6"/>
+<text x="555" y="179" text-anchor="middle" fill="#4ade80" font-size="9">ros2_command_bridge.py</text>
+
+<!-- MAVROS → UAVLink UDP arrow -->
+<line x1="430" y1="110" x2="470" y2="100" stroke="#00d4aa" stroke-width="2" marker-end="url(#a3)"/>
+<text x="450" y="99" text-anchor="middle" fill="#6b7280" font-size="9">UDP :14540</text>
+<!-- MAVLink cmds back -->
+<line x1="470" y1="130" x2="430" y2="140" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#a3)"/>
+<text x="450" y="152" text-anchor="middle" fill="#f59e0b" font-size="9">cmds ↓</text>
+
+<!-- Server -->
+<rect x="690" y="60" width="190" height="100" rx="10" fill="#1a0a2e" stroke="#6d28d9" stroke-width="1"/>
+<rect x="690" y="60" width="190" height="4" rx="10" fill="#6d28d9"/>
+<text x="785" y="82" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">qcloudstation</text>
+<rect x="705" y="92" width="160" height="20" rx="5" fill="#120a28" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="785" y="106" text-anchor="middle" fill="#a78bfa" font-size="10">Hybrid Router · :5770/:14550</text>
+<rect x="705" y="118" width="160" height="20" rx="5" fill="#120a28" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="785" y="132" text-anchor="middle" fill="#a78bfa" font-size="10">Fleet Dashboard · WebSocket</text>
+<rect x="705" y="144" width="160" height="10" rx="4" fill="#120a28" stroke="#6d28d9" stroke-width="0.3"/>
+<text x="785" y="153" text-anchor="middle" fill="#6b7280" font-size="8">Robot telemetry visualised</text>
+
+<!-- UAVLink → Server -->
+<line x1="640" y1="100" x2="690" y2="110" stroke="#a78bfa" stroke-width="2" marker-end="url(#a3)"/>
+<text x="665" y="96" text-anchor="middle" fill="#6b7280" font-size="9">UDP :14550</text>
+
+<!-- badge -->
+<rect x="20" y="4" width="80" height="16" rx="4" fill="rgba(255,107,107,0.08)" stroke="rgba(255,107,107,0.25)" stroke-width="0.5"/>
+<text x="60" y="15" text-anchor="middle" fill="#ff6b6b" font-size="9">★★☆ Medium</text>
+</svg>
+      </div>
+
       <ol class="step-list">
         <li>
           <div class="step-num coral">1</div>
@@ -1265,7 +1733,7 @@ forwarding:
           <div class="step-num coral">2</div>
           <div class="step-content">
             <strong>Launch MAVROS với UDP output</strong>
-            <span><code class="inline">ros2 launch mavros apm.launch fcu_url:="udp://:14541@127.0.0.1:14540"</code> — MAVROS nhận từ FCU và output MAVLink UDP ra port 14540</span>
+            <span><code class="inline">ros2 launch mavros apm.launch fcu_url:="udp://:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dfeeebeaebee9feeede8f1eff1eff1ee">[email&#160;protected]</a>:14540"</code> — MAVROS nhận từ FCU và output MAVLink UDP ra port 14540</span>
           </div>
         </li>
         <li>
@@ -1328,6 +1796,77 @@ forwarding:
         <div><strong>Cảnh báo:</strong> Hướng này yêu cầu hiểu biết về MAVLink spec và cần server-side support (fork Hybrid Router Go). Phù hợp cho team có dev Go.</div>
       </div>
 
+      <div class="svg-diagram">
+<svg viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- Any device -->
+<rect x="20" y="30" width="150" height="140" rx="10" fill="#1a1008" stroke="#f59e0b" stroke-width="1"/>
+<rect x="20" y="30" width="150" height="4" rx="10" fill="#f59e0b"/>
+<text x="95" y="52" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Any Device</text>
+<text x="95" y="66" text-anchor="middle" fill="#6b7280" font-size="9">Any protocol</text>
+<rect x="35" y="78" width="120" height="18" rx="4" fill="#1a0d00" stroke="#f59e0b" stroke-width="0.5"/>
+<text x="95" y="91" text-anchor="middle" fill="#fbbf24" font-size="9">Custom serial/UDP</text>
+<rect x="35" y="102" width="120" height="18" rx="4" fill="#1a0d00" stroke="#f59e0b" stroke-width="0.5"/>
+<text x="95" y="115" text-anchor="middle" fill="#fbbf24" font-size="9">Proprietary frames</text>
+<rect x="35" y="126" width="120" height="18" rx="4" fill="#1a0d00" stroke="#f59e0b" stroke-width="0.5"/>
+<text x="95" y="139" text-anchor="middle" fill="#fbbf24" font-size="9">REST / gRPC / etc</text>
+
+<!-- arrow -->
+<line x1="170" y1="100" x2="230" y2="100" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#a4)"/>
+<text x="200" y="92" text-anchor="middle" fill="#6b7280" font-size="9">any transport</text>
+
+<!-- Protocol Bridge -->
+<rect x="230" y="20" width="190" height="160" rx="10" fill="#1a1008" stroke="#f59e0b" stroke-width="1.5"/>
+<rect x="230" y="20" width="190" height="4" rx="10" fill="#f59e0b"/>
+<text x="325" y="42" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600">custom_protocol_bridge.py</text>
+<text x="325" y="56" text-anchor="middle" fill="#6b7280" font-size="9">Fork of forwarder.py</text>
+<rect x="244" y="66" width="162" height="24" rx="5" fill="#0f0800" stroke="#f59e0b" stroke-width="0.8"/>
+<text x="325" y="78" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">Custom Parser</text>
+<text x="325" y="88" text-anchor="middle" fill="#78350f" font-size="8">decode your protocol</text>
+<rect x="244" y="96" width="162" height="24" rx="5" fill="#0f0800" stroke="#f59e0b" stroke-width="0.8"/>
+<text x="325" y="108" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">TUNNEL Wrapper</text>
+<text x="325" y="118" text-anchor="middle" fill="#78350f" font-size="8">MAVLink msg ID 385</text>
+<rect x="244" y="126" width="162" height="24" rx="5" fill="#0a1828" stroke="#3b82f6" stroke-width="0.5"/>
+<text x="325" y="141" text-anchor="middle" fill="#7dd3fc" font-size="10">auth_client.py (reuse)</text>
+<rect x="244" y="156" width="162" height="18" rx="5" fill="#0a1828" stroke="#3b82f6" stroke-width="0.5"/>
+<text x="325" y="169" text-anchor="middle" fill="#4b5563" font-size="9">heartbeat_loop (reuse)</text>
+
+<!-- tunnel packet illustration -->
+<rect x="460" y="55" width="170" height="90" rx="8" fill="#0d1117" stroke="#374151" stroke-width="0.8"/>
+<text x="545" y="74" text-anchor="middle" fill="#9ca3af" font-size="10" font-weight="600">MAVLink TUNNEL frame</text>
+<rect x="472" y="82" width="50" height="16" rx="3" fill="#1a1008" stroke="#f59e0b" stroke-width="0.5"/>
+<text x="497" y="94" text-anchor="middle" fill="#fbbf24" font-size="8">Header</text>
+<rect x="527" y="82" width="40" height="16" rx="3" fill="#1a0a2e" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="547" y="94" text-anchor="middle" fill="#a78bfa" font-size="8">ID:385</text>
+<rect x="572" y="82" width="56" height="16" rx="3" fill="#1a1008" stroke="#f59e0b" stroke-width="0.5"/>
+<text x="600" y="94" text-anchor="middle" fill="#fbbf24" font-size="8">payload_type</text>
+<rect x="472" y="104" width="156" height="16" rx="3" fill="#0a1408" stroke="#4ade80" stroke-width="0.5"/>
+<text x="550" y="116" text-anchor="middle" fill="#4ade80" font-size="8">payload[128] — your custom data</text>
+<text x="545" y="134" text-anchor="middle" fill="#6b7280" font-size="8">max 128 bytes per frame</text>
+
+<!-- arrow TUNNEL → cloud -->
+<line x1="420" y1="100" x2="460" y2="100" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#a4)"/>
+<text x="440" y="92" text-anchor="middle" fill="#6b7280" font-size="9">TUNNEL</text>
+<line x1="630" y1="100" x2="680" y2="100" stroke="#a78bfa" stroke-width="2" marker-end="url(#a4)"/>
+<text x="655" y="92" text-anchor="middle" fill="#6b7280" font-size="9">UDP :14550</text>
+
+<!-- Server (forked) -->
+<rect x="680" y="50" width="160" height="100" rx="10" fill="#1a0a2e" stroke="#6d28d9" stroke-width="1"/>
+<rect x="680" y="50" width="160" height="4" rx="10" fill="#6d28d9"/>
+<text x="760" y="72" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Hybrid Router</text>
+<text x="760" y="85" text-anchor="middle" fill="#6b7280" font-size="9">(forked Go server)</text>
+<rect x="694" y="94" width="132" height="20" rx="4" fill="#120a28" stroke="#ef4444" stroke-width="0.6"/>
+<text x="760" y="108" text-anchor="middle" fill="#fca5a5" font-size="9">Custom TUNNEL parser</text>
+<rect x="694" y="120" width="132" height="20" rx="4" fill="#120a28" stroke="#6d28d9" stroke-width="0.4"/>
+<text x="760" y="134" text-anchor="middle" fill="#a78bfa" font-size="9">Redis → Dashboard</text>
+
+<!-- badge -->
+<rect x="20" y="14" width="80" height="16" rx="4" fill="rgba(255,179,71,0.08)" stroke="rgba(255,179,71,0.3)" stroke-width="0.5"/>
+<text x="60" y="25" text-anchor="middle" fill="#ffb347" font-size="9">★★★ Hard</text>
+</svg>
+      </div>
+
       <div class="subsection">
         <div class="subsection-title">Chiến lược: MAVLink TUNNEL (Message ID 385)</div>
         <div class="code-block">
@@ -1386,35 +1925,174 @@ forwarding:
         </div>
       </div>
 
-      <!-- Architecture overview -->
-      <div class="subsection">
-        <div class="subsection-title">
-          <span data-lang="vi">Tổng quan 2 sub-route</span>
-          <span data-lang="en">Two sub-route overview</span>
-        </div>
-        <div class="arch-diagram"><span class="arch-h">Sub-route 5A — Có FC (Pixhawk/ArduPilot)         Sub-route 5B — Không có FC</span>
-<span class="arch-note">─────────────────────────────────             ──────────────────────────────────</span>
+      <div class="svg-diagram">
+<svg viewBox="0 0 1000 580" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="a5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
 
-<span class="arch-box">  [RC TX]</span> ─RF─► <span class="arch-box">[RC Receiver]</span>            <span class="arch-box">  [RC TX]</span> ─RF─► <span class="arch-box">[RC Receiver]</span>
-                      │ SBUS                                       │ SBUS/PPM
-                      ▼                                            ▼
-              <span class="arch-box">[Pixhawk FC]</span>                           <span class="arch-box">[Raspberry Pi 5]</span>
-               │ MAVLink TELEM2                        rc_reader.py (pigpio/spidev)
-               ▼                                            │ RC_CHANNELS_RAW
-          <span class="arch-box">[Pi 5]</span>  ◄── RC_CHANNELS injected              ▼
-          forwarder.py                            mavlink_emitter.py
-               │                                      + RC data
-               │UDP :14550                             │UDP :14550
-               ▼                                       ▼
-        <span class="arch-box">[qcloudstation]</span>                        <span class="arch-box">[qcloudstation]</span>
+<!-- ══════════════════════════════════════════════
+     SUB-ROUTE 5A  (top half)
+     Layout: RC TX → Receiver → Pixhawk FC → Pi → Cloud
+             Camera ──────────────────────────────↗
+══════════════════════════════════════════════ -->
 
-<span class="arch-box">  [Camera]</span> ──USB/CSI──► <span class="arch-box">[Pi 5]</span>           <span class="arch-box">  [Camera]</span> ──USB/CSI──► <span class="arch-box">[Pi 5]</span>
-                         video_streamer.py                        video_streamer.py
-                         RTSP → MediaMTX                          RTSP → MediaMTX
-                         <span class="arch-note">:8554</span>                                    <span class="arch-note">:8554</span>
-                               ▼                                        ▼
-                        <span class="arch-box">[MediaMTX]</span>                         <span class="arch-box">[MediaMTX]</span>
-                         WebRTC WHEP :8889                        WebRTC WHEP :8889</div>
+<rect x="20" y="14" width="150" height="22" rx="6" fill="rgba(0,212,170,0.08)" stroke="rgba(0,212,170,0.3)" stroke-width="0.8"/>
+<text x="95" y="29" text-anchor="middle" fill="#00d4aa" font-size="10" font-weight="600">Sub-route 5A — Có FC · ★★☆</text>
+
+<!-- RC TX 5A -->
+<rect x="20" y="46" width="90" height="60" rx="8" fill="#0d1f15" stroke="#00d4aa" stroke-width="1"/>
+<text x="65" y="70" text-anchor="middle" fill="#e2e8f4" font-size="10" font-weight="600">RC TX</text>
+<text x="65" y="84" text-anchor="middle" fill="#00d4aa" font-size="9">Pilot remote</text>
+<text x="65" y="97" text-anchor="middle" fill="#4b7280" font-size="8">2.4 GHz RF</text>
+
+<!-- RF arrow -->
+<line x1="110" y1="74" x2="140" y2="74" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#a5)"/>
+<text x="125" y="68" text-anchor="middle" fill="#4b7280" font-size="8">RF</text>
+
+<!-- Receiver 5A -->
+<rect x="140" y="46" width="110" height="60" rx="8" fill="#0d1f15" stroke="#00d4aa" stroke-width="1"/>
+<text x="195" y="70" text-anchor="middle" fill="#e2e8f4" font-size="10" font-weight="600">RC Receiver</text>
+<text x="195" y="83" text-anchor="middle" fill="#00d4aa" font-size="9">FrSky / ELRS</text>
+<text x="195" y="96" text-anchor="middle" fill="#4b7280" font-size="8">SBUS out</text>
+
+<!-- SBUS down to Pixhawk -->
+<line x1="195" y1="106" x2="195" y2="134" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#a5)"/>
+<text x="210" y="124" fill="#4b7280" font-size="8">SBUS</text>
+
+<!-- Pixhawk FC 5A -->
+<rect x="120" y="134" width="150" height="80" rx="8" fill="#0d1f15" stroke="#00d4aa" stroke-width="1.2"/>
+<rect x="120" y="134" width="150" height="4" rx="8" fill="#00d4aa"/>
+<text x="195" y="156" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Pixhawk FC</text>
+<rect x="134" y="164" width="122" height="18" rx="4" fill="#0a1810" stroke="#00d4aa" stroke-width="0.5"/>
+<text x="195" y="177" text-anchor="middle" fill="#00d4aa" font-size="9">PID + RC mixing</text>
+<rect x="134" y="186" width="122" height="20" rx="4" fill="#0a1810" stroke="#00d4aa" stroke-width="0.5"/>
+<text x="195" y="200" text-anchor="middle" fill="#00d4aa" font-size="9">MAVLink → TELEM2 UART</text>
+
+<!-- Camera 5A -->
+<rect x="20" y="150" width="90" height="50" rx="8" fill="#0d1520" stroke="#f59e0b" stroke-width="1"/>
+<text x="65" y="172" text-anchor="middle" fill="#e2e8f4" font-size="10" font-weight="600">Camera</text>
+<text x="65" y="184" text-anchor="middle" fill="#f59e0b" font-size="9">Pi Cam3 / USB</text>
+<text x="65" y="193" text-anchor="middle" fill="#4b7280" font-size="8">CSI / USB</text>
+
+<!-- FC UART → Pi 5A (horizontal) -->
+<line x1="270" y1="182" x2="360" y2="182" stroke="#00d4aa" stroke-width="2" marker-end="url(#a5)"/>
+<text x="315" y="174" text-anchor="middle" fill="#6b7280" font-size="9">UART 57600</text>
+
+<!-- Camera CSI → Pi 5A (comes from below, clean route) -->
+<polyline points="65,200 65,235 360,235 360,220" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a5)"/>
+<text x="200" y="248" text-anchor="middle" fill="#f59e0b" font-size="9">CSI / USB</text>
+
+<!-- Pi 5A box -->
+<rect x="360" y="134" width="160" height="130" rx="10" fill="#0c1928" stroke="#3b82f6" stroke-width="1.2"/>
+<rect x="360" y="134" width="160" height="4" rx="10" fill="#3b82f6"/>
+<text x="440" y="156" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Pi 5 · UAVLink-Edge</text>
+<rect x="374" y="164" width="132" height="20" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="440" y="178" text-anchor="middle" fill="#7dd3fc" font-size="10">forwarder.py</text>
+<rect x="374" y="188" width="132" height="20" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="440" y="202" text-anchor="middle" fill="#7dd3fc" font-size="10">auth_client.py</text>
+<rect x="374" y="212" width="132" height="20" rx="5" fill="#0f2010" stroke="#f59e0b" stroke-width="0.8"/>
+<text x="440" y="226" text-anchor="middle" fill="#fbbf24" font-size="10">video_streamer.py</text>
+<text x="440" y="252" text-anchor="middle" fill="#4b5563" font-size="8">No rc_reader needed ✓</text>
+
+<!-- Pi 5A → Cloud (2 parallel arrows, spaced) -->
+<line x1="520" y1="178" x2="620" y2="178" stroke="#00d4aa" stroke-width="2" marker-end="url(#a5)"/>
+<text x="570" y="170" text-anchor="middle" fill="#00d4aa" font-size="9">MAVLink UDP</text>
+<line x1="520" y1="205" x2="620" y2="205" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a5)"/>
+<text x="570" y="220" text-anchor="middle" fill="#f59e0b" font-size="9">RTSP video</text>
+
+<!-- qcloudstation (shared, right side) -->
+<rect x="620" y="80" width="150" height="200" rx="10" fill="#1a0a2e" stroke="#6d28d9" stroke-width="1.2"/>
+<rect x="620" y="80" width="150" height="4" rx="10" fill="#6d28d9"/>
+<text x="695" y="102" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">qcloudstation</text>
+<rect x="634" y="112" width="122" height="20" rx="5" fill="#120a28" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="695" y="126" text-anchor="middle" fill="#a78bfa" font-size="10">Hybrid Router</text>
+<rect x="634" y="136" width="122" height="20" rx="5" fill="#120a28" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="695" y="150" text-anchor="middle" fill="#a78bfa" font-size="10">MediaMTX</text>
+<rect x="634" y="160" width="122" height="20" rx="5" fill="#120a28" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="695" y="174" text-anchor="middle" fill="#a78bfa" font-size="10">Fleet Dashboard</text>
+<rect x="634" y="184" width="122" height="20" rx="5" fill="#120a28" stroke="#6d28d9" stroke-width="0.5"/>
+<text x="695" y="198" text-anchor="middle" fill="#a78bfa" font-size="10">WebRTC WHEP</text>
+<text x="695" y="268" text-anchor="middle" fill="#6d28d9" font-size="8">← 5A arrows above</text>
+<text x="695" y="278" text-anchor="middle" fill="#6d28d9" font-size="8">← 5B arrows below</text>
+
+<!-- ── horizontal separator ── -->
+<line x1="20" y1="300" x2="980" y2="300" stroke="#374151" stroke-width="0.8" stroke-dasharray="8 4"/>
+<text x="500" y="292" text-anchor="middle" fill="#4b5563" font-size="9">─── Sub-route 5B below: No FC — Pi reads RC directly ───</text>
+
+<!-- ══════════════════════════════════════════════
+     SUB-ROUTE 5B  (bottom half)
+     Layout: RC TX → ELRS Rcvr ──(CRSF)──→ Pi → Cloud
+             Camera ───────────────────(CSI)──↗
+══════════════════════════════════════════════ -->
+
+<rect x="20" y="312" width="160" height="22" rx="6" fill="rgba(255,107,107,0.08)" stroke="rgba(255,107,107,0.3)" stroke-width="0.8"/>
+<text x="100" y="327" text-anchor="middle" fill="#ff6b6b" font-size="10" font-weight="600">Sub-route 5B — Không FC · ★★★</text>
+
+<!-- RC TX 5B -->
+<rect x="20" y="344" width="90" height="60" rx="8" fill="#1f0d0d" stroke="#ff6b6b" stroke-width="1"/>
+<text x="65" y="368" text-anchor="middle" fill="#e2e8f4" font-size="10" font-weight="600">RC TX</text>
+<text x="65" y="382" text-anchor="middle" fill="#ff6b6b" font-size="9">Pilot remote</text>
+<text x="65" y="395" text-anchor="middle" fill="#4b3030" font-size="8">2.4 GHz RF</text>
+
+<!-- RF arrow 5B -->
+<line x1="110" y1="372" x2="140" y2="372" stroke="#ff6b6b" stroke-width="1.5" marker-end="url(#a5)"/>
+<text x="125" y="366" text-anchor="middle" fill="#4b3030" font-size="8">RF</text>
+
+<!-- ELRS Receiver 5B -->
+<rect x="140" y="344" width="130" height="60" rx="8" fill="#1f0d0d" stroke="#ff6b6b" stroke-width="1.2"/>
+<text x="205" y="368" text-anchor="middle" fill="#e2e8f4" font-size="10" font-weight="600">ELRS Receiver</text>
+<text x="205" y="382" text-anchor="middle" fill="#ff6b6b" font-size="9">CRSF output</text>
+<text x="205" y="395" text-anchor="middle" fill="#4b3030" font-size="8">420kbps · no inverter</text>
+
+<!-- CRSF → Pi 5B (clean horizontal) -->
+<line x1="270" y1="372" x2="360" y2="372" stroke="#ff6b6b" stroke-width="2.5" marker-end="url(#a5)"/>
+<text x="315" y="364" text-anchor="middle" fill="#ff6b6b" font-size="9">CRSF 420k</text>
+<text x="315" y="388" text-anchor="middle" fill="#4b3030" font-size="8">no FC needed!</text>
+
+<!-- Camera 5B -->
+<rect x="20" y="436" width="110" height="50" rx="8" fill="#0d1520" stroke="#f59e0b" stroke-width="1"/>
+<text x="75" y="458" text-anchor="middle" fill="#e2e8f4" font-size="10" font-weight="600">Camera</text>
+<text x="75" y="472" text-anchor="middle" fill="#f59e0b" font-size="9">Pi Cam3 / USB</text>
+<text x="75" y="481" text-anchor="middle" fill="#4b5563" font-size="8">CSI / USB 3.0</text>
+
+<!-- Camera → Pi 5B (clean horizontal route below) -->
+<polyline points="130,461 360,461 360,440" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a5)"/>
+<text x="250" y="474" text-anchor="middle" fill="#f59e0b" font-size="9">CSI ribbon / USB</text>
+
+<!-- Pi 5B box -->
+<rect x="360" y="334" width="175" height="160" rx="10" fill="#0c1928" stroke="#3b82f6" stroke-width="1.2"/>
+<rect x="360" y="334" width="175" height="4" rx="10" fill="#3b82f6"/>
+<text x="447" y="356" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Pi 5 · UAVLink-Edge</text>
+<rect x="374" y="366" width="147" height="20" rx="5" fill="#1a0808" stroke="#ff6b6b" stroke-width="1"/>
+<text x="447" y="380" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="600">rc_reader.py  NEW</text>
+<rect x="374" y="390" width="147" height="20" rx="5" fill="#0f2010" stroke="#f59e0b" stroke-width="0.8"/>
+<text x="447" y="404" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">video_streamer.py  NEW</text>
+<rect x="374" y="414" width="147" height="18" rx="5" fill="#0f1a30" stroke="#f59e0b" stroke-width="0.5"/>
+<text x="447" y="427" text-anchor="middle" fill="#fbbf24" font-size="9">mavlink_emitter.py</text>
+<rect x="374" y="436" width="147" height="18" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="447" y="449" text-anchor="middle" fill="#7dd3fc" font-size="9">forwarder.py</text>
+<rect x="374" y="458" width="147" height="28" rx="5" fill="#0a1828" stroke="#1e3a5f" stroke-width="0.5"/>
+<text x="447" y="471" text-anchor="middle" fill="#7dd3fc" font-size="9">auth_client.py</text>
+<text x="447" y="483" text-anchor="middle" fill="#4b5563" font-size="8">heartbeat_loop</text>
+
+<!-- Pi 5B → Cloud (2 parallel clean arrows) -->
+<line x1="535" y1="390" x2="620" y2="360" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#a5)"/>
+<text x="578" y="376" text-anchor="middle" fill="#ff6b6b" font-size="9">MAVLink + RC</text>
+<line x1="535" y1="420" x2="620" y2="400" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a5)"/>
+<text x="580" y="422" text-anchor="middle" fill="#f59e0b" font-size="9">RTSP video</text>
+
+<!-- Legend bottom -->
+<rect x="20" y="540" width="960" height="32" rx="6" fill="#0a0f1a" stroke="#1e2533" stroke-width="0.5"/>
+<circle cx="40" cy="556" r="4" fill="#00d4aa"/>
+<text x="52" y="560" fill="#6b7280" font-size="9">MAVLink telemetry</text>
+<circle cx="160" cy="556" r="4" fill="#f59e0b"/>
+<text x="172" y="560" fill="#6b7280" font-size="9">Video RTSP</text>
+<circle cx="255" cy="556" r="4" fill="#ff6b6b"/>
+<text x="267" y="560" fill="#6b7280" font-size="9">RC channels (CRSF)</text>
+<circle cx="390" cy="556" r="4" fill="#3b82f6"/>
+<text x="402" y="560" fill="#6b7280" font-size="9">UAVLink-Edge Pi</text>
+<circle cx="510" cy="556" r="4" fill="#6d28d9"/>
+<text x="522" y="560" fill="#6b7280" font-size="9">qcloudstation server</text>
+</svg>
       </div>
 
       <!-- Comparison table -->
@@ -1878,26 +2556,87 @@ video:
           <span data-lang="vi">Sơ đồ đấu nối vật lý (Sub-route 5B)</span>
           <span data-lang="en">Physical wiring diagram (Sub-route 5B)</span>
         </div>
-        <div class="arch-diagram"><span class="arch-h">  Raspberry Pi 5                     RC Receiver (ELRS / CRSF)</span>
-  <span class="arch-note">  ────────────────                    ─────────────────────────</span>
-  Pin 6  (GND)   ────────────────── GND
-  Pin 4  (5V)    ────────────────── 5V (hoặc dùng BEC riêng)
-  Pin 10 (RXD2)  ────────────────── TX  (CRSF out của receiver)
-  <span class="arch-note">                                    ← Không cần inverter với CRSF/ELRS!</span>
+        <div class="arch-diagram" style="display:none"></div>
+        <div class="svg-diagram">
+<svg viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="aw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
 
-  <span class="arch-note">  Enable UART2 trên Pi 5 (thêm vào /boot/firmware/config.txt):</span>
-  <span class="arch-line">  dtoverlay=uart2</span>
-  <span class="arch-line">  → /dev/ttyAMA2 sẵn sàng</span>
+<!-- ── LEFT: Raspberry Pi 5 ── -->
+<rect x="20" y="20" width="230" height="200" rx="10" fill="#1a2035" stroke="#3b82f6" stroke-width="1.5"/>
+<rect x="20" y="20" width="230" height="5" rx="10" fill="#3b82f6"/>
+<text x="135" y="44" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">Raspberry Pi 5</text>
+<!-- GPIO header -->
+<rect x="36" y="58" width="11" height="128" rx="2" fill="#374151"/>
+<rect x="51" y="58" width="11" height="128" rx="2" fill="#374151"/>
+<!-- 5 pins at y=72,96,120,144,168 (24px apart = plenty of space) -->
+<circle cx="41" cy="72"  r="4" fill="#fbbf24"/>
+<circle cx="41" cy="96"  r="4" fill="#ef4444"/>
+<circle cx="41" cy="120" r="4" fill="#22c55e"/>
+<circle cx="41" cy="144" r="4" fill="#22c55e" opacity="0.4"/>
+<circle cx="41" cy="168" r="4" fill="#60a5fa"/>
+<!-- Labels at matching Y, left-aligned -->
+<text x="76" y="76"  fill="#fbbf24" font-size="10">Pin 4  —  5V</text>
+<text x="76" y="100" fill="#ef4444" font-size="10">Pin 6  —  GND</text>
+<text x="76" y="124" fill="#22c55e" font-size="10">Pin 8  —  TX (UART0)</text>
+<text x="76" y="148" fill="#22c55e" font-size="9" opacity="0.5">Pin 10 —  RX (UART0, unused)</text>
+<text x="76" y="172" fill="#60a5fa" font-size="10">RXD2  —  UART2 (dtoverlay)</text>
+<!-- Ports at bottom -->
+<rect x="36" y="198" width="70" height="12" rx="3" fill="#374151"/>
+<text x="71" y="208" text-anchor="middle" fill="#6b7280" font-size="8">USB 3.0</text>
+<rect x="116" y="198" width="50" height="12" rx="3" fill="#1e3a5f"/>
+<text x="141" y="208" text-anchor="middle" fill="#60a5fa" font-size="8">CAM0</text>
 
-<span class="arch-h">  Pi Camera Module 3                 Raspberry Pi 5</span>
-  <span class="arch-note">  ──────────────────                 ────────────────</span>
-  CSI Ribbon Cable ─────────────────── CAM0 / CAM1 port
-  <span class="arch-note">  (22-pin FPC, bản mới của Pi 5)</span>
+<!-- ── CENTER: Wires (all horizontal, no diagonals) ── -->
+<!-- Wire 1: 5V at y=72, Pi → Receiver -->
+<line x1="250" y1="72"  x2="460" y2="72"  stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#aw)"/>
+<text x="355" y="65" text-anchor="middle" fill="#fbbf24" font-size="9">5V power</text>
 
-<span class="arch-h">  USB Webcam (thay thế)</span>
-  USB-A ──────────────────────────── USB 3.0 port Pi 5
-  <span class="arch-note">  Dùng webcam có hardware H.264 encode để giảm CPU load</span>
-  <span class="arch-note">  Ví dụ: Logitech C920, Logitech BRIO</span></div>
+<!-- Wire 2: GND at y=96, Pi → Receiver -->
+<line x1="250" y1="96"  x2="460" y2="96"  stroke="#ef4444" stroke-width="2" marker-end="url(#aw)"/>
+<text x="355" y="89" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="600">GND</text>
+
+<!-- Wire 3: CRSF at y=168, Receiver TX → Pi RXD2 (reversed arrow) -->
+<line x1="460" y1="168" x2="250" y2="168" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#aw)"/>
+<text x="355" y="161" text-anchor="middle" fill="#60a5fa" font-size="9" font-weight="600">CRSF · 420kbps · no inverter</text>
+<text x="355" y="180" text-anchor="middle" fill="#4b5563" font-size="8">Receiver TX  →  Pi RXD2</text>
+
+<!-- Wire 4: FPC ribbon at y=230, Camera → Pi CAM0 -->
+<line x1="460" y1="230" x2="141" y2="212" stroke="#f59e0b" stroke-width="2" marker-end="url(#aw)"/>
+<text x="330" y="228" text-anchor="middle" fill="#f59e0b" font-size="9">22-pin FPC ribbon  →  CAM0</text>
+
+<!-- ── RIGHT TOP: ELRS Receiver ── -->
+<rect x="460" y="44" width="200" height="148" rx="8" fill="#1f0d0d" stroke="#ff6b6b" stroke-width="1.2"/>
+<rect x="460" y="44" width="200" height="4" rx="8" fill="#ff6b6b"/>
+<text x="560" y="66" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">ELRS Receiver</text>
+<text x="560" y="80" text-anchor="middle" fill="#6b7280" font-size="9">e.g. BetaFPV ELRS Nano</text>
+<!-- Receiver pin dots at matching Y rows -->
+<circle cx="480" cy="96"  r="4" fill="#ef4444"/>
+<text x="494" y="100" fill="#ef4444" font-size="10">GND</text>
+<circle cx="480" cy="72"  r="4" fill="#fbbf24"/>
+<text x="494" y="76"  fill="#fbbf24" font-size="10">5V in</text>
+<circle cx="480" cy="168" r="4" fill="#60a5fa"/>
+<text x="494" y="172" fill="#60a5fa" font-size="10">TX — CRSF out</text>
+<rect x="468" y="120" width="184" height="24" rx="5" fill="#0f0808" stroke="#ff6b6b" stroke-width="0.5"/>
+<text x="560" y="130" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600">Serial: 420000 baud</text>
+<text x="560" y="141" text-anchor="middle" fill="#6b7280" font-size="8">No signal inverter needed!</text>
+<text x="560" y="185" text-anchor="middle" fill="#6b7280" font-size="8">/dev/ttyAMA2  (enable: dtoverlay=uart2)</text>
+
+<!-- ── RIGHT BOTTOM: Camera ── -->
+<rect x="460" y="206" width="200" height="40" rx="8" fill="#0d1520" stroke="#f59e0b" stroke-width="1.2"/>
+<text x="560" y="224" text-anchor="middle" fill="#e2e8f4" font-size="11" font-weight="600">Pi Camera Module 3</text>
+<text x="560" y="238" text-anchor="middle" fill="#f59e0b" font-size="9">22-pin FPC ribbon → CAM0 port</text>
+
+<!-- ── FAR RIGHT: SBUS note ── -->
+<rect x="688" y="44" width="120" height="110" rx="8" fill="#0f1825" stroke="#374151" stroke-width="0.8" stroke-dasharray="5 3"/>
+<text x="748" y="64"  text-anchor="middle" fill="#9ca3af" font-size="10" font-weight="600">SBUS instead?</text>
+<text x="748" y="80"  text-anchor="middle" fill="#6b7280" font-size="8">100kbps · 8E2</text>
+<text x="748" y="92"  text-anchor="middle" fill="#6b7280" font-size="8">INVERTED signal</text>
+<rect x="698" y="100" width="100" height="18" rx="4" fill="#1a0808" stroke="#ef4444" stroke-width="0.5"/>
+<text x="748" y="112" text-anchor="middle" fill="#ef4444" font-size="8">NPN inverter needed</text>
+<text x="748" y="130" text-anchor="middle" fill="#6b7280" font-size="8">/dev/ttyAMA2</text>
+<text x="748" y="142" text-anchor="middle" fill="#6b7280" font-size="8">@ 100000 baud</text>
+</svg>
+        </div>
       </div>
 
       <!-- Feasibility limitations -->
@@ -1938,21 +2677,68 @@ video:
 
     <!-- ─── WIRING ─── -->
     <section class="section" id="wiring">
-      <div class="section-title">Sơ đồ đấu nối UART (Pi ↔ Pixhawk) <a href="#wiring" class="anchor-link">#</a></div>
-      <div class="arch-diagram">  <span class="arch-h">Raspberry Pi 5                    Pixhawk TELEM2</span>
-  <span class="arch-note">────────────────                  ─────────────────</span>
-  Pin 6  (GND)  ─────────────────── GND  (Pin 6)
-  Pin 8  (TXD)  ─────────────────── RX   (Pin 3)
-  Pin 10 (RXD)  ─────────────────── TX   (Pin 2)
-  <span class="arch-note">                                  5V supply từ Pixhawk KHÔNG nối vào Pi 5!</span>
+      <div class="section-title"><span data-lang="vi">Sơ đồ đấu nối UART (Pi ↔ Pixhawk)</span><span data-lang="en">UART wiring (Pi ↔ Pixhawk)</span> <a href="#wiring" class="anchor-link">#</a></div>
+      <div class="svg-diagram">
+<svg viewBox="0 0 780 230" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="aw2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
 
-  <span class="arch-h">config.yaml:</span>
-  connection_type: "serial"
-  serial_port: "/dev/ttyAMA0"    <span class="arch-note"># Pi 5 default UART</span>
-  serial_baud: 57600              <span class="arch-note"># Pixhawk TELEM2 default baud</span>
+<!-- Pi 5 board -->
+<rect x="20" y="30" width="240" height="165" rx="10" fill="#1a2035" stroke="#3b82f6" stroke-width="1.5"/>
+<rect x="20" y="30" width="240" height="5" rx="10" fill="#3b82f6"/>
+<text x="140" y="54" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">Raspberry Pi 5</text>
+<rect x="36" y="68" width="11" height="106" rx="2" fill="#374151"/>
+<rect x="51" y="68" width="11" height="106" rx="2" fill="#374151"/>
+<!-- Pins at y=82, 104, 126, 150 — 22px apart, plenty of room -->
+<circle cx="41" cy="82"  r="4" fill="#ef4444"/>
+<circle cx="41" cy="104" r="4" fill="#22c55e"/>
+<circle cx="41" cy="126" r="4" fill="#60a5fa"/>
+<circle cx="41" cy="150" r="4" fill="#4b5563" opacity="0.4"/>
+<text x="76" y="86"  fill="#ef4444" font-size="10">Pin 6  —  GND</text>
+<text x="76" y="108" fill="#22c55e" font-size="10">Pin 8  —  TXD</text>
+<text x="76" y="130" fill="#60a5fa" font-size="10">Pin 10 —  RXD</text>
+<text x="76" y="154" fill="#4b5563" font-size="9">Pin 4  —  5V  (DO NOT connect)</text>
+<text x="140" y="183" text-anchor="middle" fill="#4b5563" font-size="8">connection_type: "serial" · /dev/ttyAMA0</text>
 
-  <span class="arch-note">Lưu ý: Enable UART trên Pi 5:</span>
-  <span class="arch-line">  sudo raspi-config → Interface Options → Serial Port → Disable shell → Enable UART</span></div>
+<!-- Wire routing zone between two boards -->
+<!-- Wire 1 GND: straight horizontal at y=82 -->
+<line x1="260" y1="82" x2="480" y2="82" stroke="#ef4444" stroke-width="2"/>
+<!-- Wire 2 TX→RX: straight horizontal at y=104 -->
+<line x1="260" y1="104" x2="480" y2="104" stroke="#22c55e" stroke-width="2" marker-end="url(#aw2)"/>
+<!-- Wire 3 RX←TX: straight horizontal at y=126, reversed direction -->
+<line x1="480" y1="126" x2="260" y2="126" stroke="#60a5fa" stroke-width="2" marker-end="url(#aw2)"/>
+
+<!-- Labels placed ABOVE each wire so they never overlap -->
+<text x="370" y="76" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="600">GND  (common ground)</text>
+<text x="370" y="98" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="600">Pi TXD  →  Pixhawk RX</text>
+<text x="370" y="120" text-anchor="middle" fill="#60a5fa" font-size="9" font-weight="600">Pi RXD  ←  Pixhawk TX</text>
+
+<!-- Pixhawk TELEM2 block -->
+<rect x="480" y="30" width="240" height="165" rx="10" fill="#0d1f15" stroke="#00d4aa" stroke-width="1.5"/>
+<rect x="480" y="30" width="240" height="5" rx="10" fill="#00d4aa"/>
+<text x="600" y="54" text-anchor="middle" fill="#e2e8f4" font-size="12" font-weight="600">Pixhawk — TELEM2</text>
+<!-- GPIO col on right side of Pixhawk block -->
+<rect x="698" y="68" width="11" height="106" rx="2" fill="#374151"/>
+<rect x="713" y="68" width="11" height="106" rx="2" fill="#374151"/>
+<!-- Pins at matching Y rows -->
+<circle cx="703" cy="82"  r="4" fill="#ef4444"/>
+<circle cx="703" cy="104" r="4" fill="#60a5fa"/>
+<circle cx="703" cy="126" r="4" fill="#22c55e"/>
+<circle cx="703" cy="150" r="4" fill="#4b5563" opacity="0.4"/>
+<!-- Labels left-aligned from x=496 -->
+<text x="496" y="86"  fill="#ef4444" font-size="10">GND  (Pin 6)</text>
+<text x="496" y="108" fill="#60a5fa" font-size="10">RX   (Pin 3)  ←  from Pi TXD</text>
+<text x="496" y="130" fill="#22c55e" font-size="10">TX   (Pin 2)  →  to Pi RXD</text>
+<text x="496" y="154" fill="#4b5563" font-size="9">5V   (Pin 1)  DO NOT connect!</text>
+<text x="600" y="183" text-anchor="middle" fill="#4b5563" font-size="8">ArduPilot: param set SR2_RC_CHAN 5 · MAVLink2</text>
+
+<!-- Drone silhouette bottom right -->
+<ellipse cx="600" cy="213" rx="30" ry="10" fill="none" stroke="#00d4aa" stroke-width="0.8" opacity="0.4"/>
+<line x1="570" y1="213" x2="554" y2="203" stroke="#00d4aa" stroke-width="1" opacity="0.4"/>
+<line x1="630" y1="213" x2="646" y2="203" stroke="#00d4aa" stroke-width="1" opacity="0.4"/>
+<circle cx="554" cy="200" r="5" fill="none" stroke="#00d4aa" stroke-width="0.8" opacity="0.4"/>
+<circle cx="646" cy="200" r="5" fill="none" stroke="#00d4aa" stroke-width="0.8" opacity="0.4"/>
+</svg>
+      </div>
     </section>
 
     <div class="divider"></div>
@@ -2012,15 +2798,94 @@ video:
 
       <div class="subsection">
         <div class="subsection-title">Dependency graph</div>
-        <div class="arch-diagram"><span class="arch-h">main.py</span>
-  ├── Config(config.yaml)       <span class="arch-note">config.py: parse YAML thành dict</span>
-  ├── AuthClient(cfg.auth)      <span class="arch-note">auth_client.py: TCP handshake, session</span>
-  │     └── .drone_secret       <span class="arch-note">JSON file: lưu secret_key sau đăng ký</span>
-  ├── Forwarder(cfg, auth)      <span class="arch-note">forwarder.py: MAVLink bridge</span>
-  │     ├── uplink_loop()       <span class="arch-note">Thread: FC → UDP server</span>
-  │     ├── downlink_loop()     <span class="arch-note">Thread: UDP server → FC</span>
-  │     └── heartbeat_loop()    <span class="arch-note">Thread: MSG_SESSION_REFRESH 1Hz</span>
-  └── start_server(web_port)    <span class="arch-note">web_server.py: Flask /api/status</span></div>
+        <div class="svg-diagram">
+<svg viewBox="0 0 960 290" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono',monospace">
+<defs><marker id="adep" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<!-- ── ROOT: main.py centered at x=480 ── -->
+<rect x="380" y="16" width="200" height="46" rx="8" fill="#1a2035" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="480" y="36" text-anchor="middle" fill="#e2e8f4" font-size="13" font-weight="600">main.py</text>
+<text x="480" y="52" text-anchor="middle" fill="#6b7280" font-size="9">Entry point · wiring</text>
+
+<!--
+  5 child nodes evenly spaced across x=480 ± spread
+  Node centers: 80, 220, 380, 560, 730, 880
+  Each node width=160, so edges: 0..160, 140..300, 300..460, 480..640, 650..810, 800..960
+  Adjusted: 20..180, 180..340, 340..500, 500..660, 660..820, 820..960 — 6 nodes
+  Using 5: centers at 95, 255, 480, 660, 840
+-->
+
+<!-- Branch lines: straight down from main.py bottom, then angled to each child top -->
+<line x1="420" y1="62" x2="95"  y2="110" stroke="#374151" stroke-width="1" marker-end="url(#adep)"/>
+<line x1="445" y1="62" x2="255" y2="110" stroke="#374151" stroke-width="1" marker-end="url(#adep)"/>
+<line x1="480" y1="62" x2="480" y2="110" stroke="#374151" stroke-width="1.5" marker-end="url(#adep)"/>
+<line x1="515" y1="62" x2="660" y2="110" stroke="#374151" stroke-width="1" marker-end="url(#adep)"/>
+<line x1="540" y1="62" x2="840" y2="110" stroke="#374151" stroke-width="1" marker-end="url(#adep)"/>
+
+<!-- ── NODE 1: config.py (center x=95) ── -->
+<rect x="15" y="110" width="160" height="50" rx="8" fill="#0f1a08" stroke="#4ade80" stroke-width="1"/>
+<text x="95" y="130" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600">config.py</text>
+<text x="95" y="148" text-anchor="middle" fill="#6b7280" font-size="9">parse YAML → dict</text>
+<!-- config.yaml file artifact -->
+<rect x="30" y="178" width="130" height="30" rx="6" fill="#0a1408" stroke="#374151" stroke-width="0.8" stroke-dasharray="4 2"/>
+<text x="95" y="192" text-anchor="middle" fill="#4b5563" font-size="9">config.yaml</text>
+<text x="95" y="203" text-anchor="middle" fill="#374151" font-size="8">credentials · ports</text>
+<line x1="95" y1="160" x2="95" y2="178" stroke="#374151" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#adep)"/>
+
+<!-- ── NODE 2: auth_client.py (center x=255) ── -->
+<rect x="175" y="110" width="160" height="50" rx="8" fill="#0c1928" stroke="#3b82f6" stroke-width="1"/>
+<text x="255" y="130" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="600">auth_client.py</text>
+<text x="255" y="148" text-anchor="middle" fill="#6b7280" font-size="9">TCP handshake · session</text>
+<!-- .drone_secret artifact -->
+<rect x="185" y="178" width="140" height="30" rx="6" fill="#0a1828" stroke="#374151" stroke-width="0.8" stroke-dasharray="4 2"/>
+<text x="255" y="192" text-anchor="middle" fill="#4b5563" font-size="9">.drone_secret</text>
+<text x="255" y="203" text-anchor="middle" fill="#374151" font-size="8">secret_key (JSON file)</text>
+<line x1="255" y1="160" x2="255" y2="178" stroke="#374151" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#adep)"/>
+
+<!-- ── NODE 3: forwarder.py (center x=480) — wider, highlighted ── -->
+<rect x="370" y="110" width="220" height="50" rx="8" fill="#0c1928" stroke="#00d4aa" stroke-width="2"/>
+<text x="480" y="130" text-anchor="middle" fill="#00d4aa" font-size="12" font-weight="600">forwarder.py</text>
+<text x="480" y="148" text-anchor="middle" fill="#6b7280" font-size="9">MAVLink bridge · 3 daemon threads</text>
+<!-- 3 thread sub-nodes -->
+<rect x="375" y="178" width="64" height="56" rx="6" fill="#0a1818" stroke="#00d4aa" stroke-width="0.8"/>
+<text x="407" y="198" text-anchor="middle" fill="#00d4aa" font-size="9" font-weight="600">uplink</text>
+<text x="407" y="212" text-anchor="middle" fill="#4b5563" font-size="8">FC → UDP</text>
+<text x="407" y="224" text-anchor="middle" fill="#4b5563" font-size="7">server :14550</text>
+<rect x="447" y="178" width="66" height="56" rx="6" fill="#0a1818" stroke="#00d4aa" stroke-width="0.8"/>
+<text x="480" y="198" text-anchor="middle" fill="#00d4aa" font-size="9" font-weight="600">downlink</text>
+<text x="480" y="212" text-anchor="middle" fill="#4b5563" font-size="8">UDP → FC</text>
+<text x="480" y="224" text-anchor="middle" fill="#4b5563" font-size="7">commands</text>
+<rect x="521" y="178" width="64" height="56" rx="6" fill="#0a1818" stroke="#f59e0b" stroke-width="0.8"/>
+<text x="553" y="198" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="600">heartbeat</text>
+<text x="553" y="212" text-anchor="middle" fill="#4b5563" font-size="8">1 Hz · NAT</text>
+<text x="553" y="224" text-anchor="middle" fill="#4b5563" font-size="7">SESSION_REFRESH</text>
+<line x1="407" y1="160" x2="407" y2="178" stroke="#374151" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#adep)"/>
+<line x1="480" y1="160" x2="480" y2="178" stroke="#374151" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#adep)"/>
+<line x1="553" y1="160" x2="553" y2="178" stroke="#374151" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#adep)"/>
+
+<!-- ── NODE 4: web_server.py (center x=660) ── -->
+<rect x="590" y="110" width="140" height="50" rx="8" fill="#0c1928" stroke="#a78bfa" stroke-width="1"/>
+<text x="660" y="130" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">web_server.py</text>
+<text x="660" y="148" text-anchor="middle" fill="#6b7280" font-size="9">Flask /api/status :8080</text>
+
+<!-- ── NODE 5: Optional modules (center x=840) ── -->
+<rect x="760" y="110" width="180" height="50" rx="8" fill="#0d0d0d" stroke="#374151" stroke-width="0.8" stroke-dasharray="5 3"/>
+<text x="850" y="128" text-anchor="middle" fill="#4b5563" font-size="10">Optional modules</text>
+<text x="850" y="143" text-anchor="middle" fill="#374151" font-size="9">rc_reader.py</text>
+<text x="850" y="155" text-anchor="middle" fill="#374151" font-size="9">video_streamer.py</text>
+
+<!-- ── LEGEND ── -->
+<rect x="20" y="265" width="920" height="20" rx="4" fill="#0a0f1a" stroke="#1e2533" stroke-width="0.5"/>
+<line x1="36" y1="275" x2="62" y2="275" stroke="#374151" stroke-width="1.5"/>
+<text x="70" y="279" fill="#6b7280" font-size="9">imports</text>
+<line x1="140" y1="275" x2="166" y2="275" stroke="#374151" stroke-width="1" stroke-dasharray="4 2"/>
+<text x="174" y="279" fill="#6b7280" font-size="9">reads file</text>
+<rect x="256" y="269" width="12" height="12" rx="2" fill="none" stroke="#374151" stroke-width="0.8" stroke-dasharray="4 2"/>
+<text x="274" y="279" fill="#6b7280" font-size="9">optional module</text>
+<circle cx="390" cy="275" r="4" fill="#00d4aa" opacity="0.6"/>
+<text x="400" y="279" fill="#6b7280" font-size="9">core (always required)</text>
+</svg>
+        </div>
       </div>
     </section>
 
@@ -2215,13 +3080,13 @@ log:
     <div>UAVLink-Edge DIY Wiki · qcloudcontrol.com · Cập nhật 2026-04</div>
     <div>
       <a href="https://github.com/your-org/UAVLink-Edge-Python">GitHub</a> ·
-      <a href="mailto:hbqsolution@gmail.com">hbqsolution@gmail.com</a>
+      <a href="/cdn-cgi/l/email-protection#dcb4beadafb3b0a9a8b5b3b29cbbb1bdb5b0f2bfb3b1"><span class="__cf_email__" data-cfemail="7a12180b0915160f0e1315143a1d171b131654191517">[email&#160;protected]</span></a>
     </div>
   </footer>
 
 </main>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ─── LANGUAGE SWITCHER ───
 function setLang(lang) {
   document.body.className = document.body.className
@@ -2243,26 +3108,4 @@ function setLang(lang) {
 // ─── SCROLL PROGRESS ───
 window.addEventListener('scroll', () => {
   const el = document.getElementById('scrollLine');
-  const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight);
-  el.style.height = (pct * 100) + 'vh';
-});
-
-// ─── ACTIVE NAV HIGHLIGHT ───
-const sections = document.querySelectorAll('section[id]');
-const navLinks = document.querySelectorAll('.nav-link');
-
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      navLinks.forEach(l => l.classList.remove('active'));
-      const link = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
-      if (link) link.classList.add('active');
-    }
-  });
-}, { threshold: 0.3 });
-
-sections.forEach(s => obs.observe(s));
-</script>
-
-</body>
-</html>
+  const pct = window.scrollY / (document.body.scrollHeight - windo

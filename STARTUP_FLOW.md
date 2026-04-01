@@ -85,10 +85,16 @@ Pi CM5 Boot
 |---|---|---|
 | `MainThread` | `main.py` | Giữ ứng dụng sống (`while True`) và bắt tín hiệu tắt (SIGINT/SIGTERM) |
 | `web_server` | `web_server.py` | Chạy Flask/HTTP server xử lý API request trên định tuyến `/` |
-| `keepalive_loop` | `auth_client.py` | Quản lý vòng đời Authentication Session (TCP) |
+| `keepalive_loop` | `auth_client.py` | Quản lý vòng đời TCP: Tự động gửi `SESSION_REFRESH` khi `< 30s` tới lúc hết hạn token. Thực hiện re-authenticate toàn bộ kèm *exponential backoff* nếu mất kết nối. |
 | `uplink_loop` | `forwarder.py` | Đọc MAVLink từ Pixhawk (`recv_match`) → Gửi lên Server (UDP) |
 | `downlink_loop` | `forwarder.py` | Nhận MAVLink từ Server về qua UDP socket → Gửi lại Pixhawk (`write`) |
-| `heartbeat_loop`| `forwarder.py` | Gửi gói `MSG_SESSION_REFRESH` (UDP) tới server mỗi giây để mở/chống timeout cổng NAT |
+| `heartbeat_loop`| `forwarder.py` | Gửi gói `MSG_SESSION_REFRESH` (UDP) tới server mỗi giây để liên tục báo cáo endpoint |
+
+---
+
+## Tính năng Đăng ký (Register)
+Thiết bị lần đầu tích hợp cần kết nối với server bằng lệnh `python main.py --register`. Lúc này script cấu hình tự động gửi tín hiệu `REGISTER_INIT`/`REGISTER_RESPONSE` và lưu key vào file cục bộ `.drone_secret` mà không spawn các luồng MAVLink.
+
 
 ---
 

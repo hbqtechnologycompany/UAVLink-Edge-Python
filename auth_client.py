@@ -150,13 +150,39 @@ class AuthClient:
         return False
 
     def keepalive_loop(self):
+        backoff = 1
         while self.running:
-            time.sleep(self.refresh_interval or 30)
-            if not self.running:
-                break
-            # Logic for session refresh would go here
-            # For now, just a placeholder as session management is complex
-            pass
+            now = time.time()
+            if now >= self.expires_at:
+                logger.info("Session expired, re-authenticating")
+                if self.conn:
+                    self.conn.close()
+                    self.conn = None
+                
+                if self.authenticate():
+                    backoff = 1
+                else:
+                    logger.warning(f"Re-authentication failed, retrying in {backoff}s")
+                    for _ in range(backoff):
+                        if not self.running:
+                            break
+                        time.sleep(1)
+                    backoff = min(backoff * 2, 60)
+                    continue
+
+            elif self.expires_at - now < 30:
+                packet = self.get_session_refresh_packet()
+                if packet and self.conn:
+                    try:
+                        self.conn.sendall(packet)
+                        logger.info("Session refreshed")
+                        # Gia hạn thời gian hết hạn ở local dựa trên refresh_interval
+                        self.expires_at = time.time() + (self.refresh_interval if self.refresh_interval > 30 else 60)
+                    except Exception as e:
+                        logger.error(f"Failed to refresh session: {e}")
+                        self.expires_at = 0 # Ép re-authenticate ở chu kỳ lặp sau
+            
+            time.sleep(1)
 
     def get_session_refresh_packet(self):
         if not self.session_token:
