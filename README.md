@@ -1,12 +1,22 @@
-# UAVLink-Edge (Phiên bản Python cho Pi 5)
+# UAVLink-Edge (Python Version for Pi 5)
 
-Dự án này là phiên bản viết bằng Python của UAVLink-Edge . Vai trò cốt lõi của ứng dụng là làm cầu nối (bridge) giữa mạch điều khiển bay (Flight Controller) thông qua giao thức MAVLink và hệ thống máy chủ **qcloudstation** tại địa chỉ [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
+[Tiếng Việt](#tiếng-việt) | [English](#english)
+
+---
+
+## English
+
+Dự án này là phiên bản viết bằng Python của UAVLink-Edge. Vai trò cốt lõi của ứng dụng là làm cầu nối (bridge) giữa mạch điều khiển bay (Flight Controller) thông qua giao thức MAVLink và hệ thống máy chủ **qcloudstation** tại địa chỉ [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
+
+This project is the Python implementation of UAVLink-Edge. The core role of this application is to act as a bridge between the Flight Controller (via MAVLink protocol) and the **qcloudstation** server at [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
 
 Hệ thống cho phép người dùng giám sát và điều khiển phương tiện không người lái (UAV) gần như theo thời gian thực (near real-time) qua nền tảng đám mây (Cloud), mang đến trải nghiệm lưu loát và khả năng điều khiển từ xa tương tự như phần mềm QGroundControl truyền thống.
 
-![Giao diện điều khiển qua Cloud](images/pilot-ui.jpg)
+The system allows users to monitor and control Unmanned Aerial Vehicles (UAVs) in near real-time via the Cloud, providing a smooth experience and remote control capabilities similar to traditional QGroundControl software.
 
-### Sơ đồ khối hệ thống
+![Cloud Control Interface](images/pilot-ui.jpg)
+
+### System Block Diagram / Sơ đồ khối hệ thống
 
 ```text
 ┌────────────────┐      MAVLink      ┌──────────────────────┐   UDP/TCP (WiFi)   ┌───────────────────────────┐
@@ -15,112 +25,123 @@ Hệ thống cho phép người dùng giám sát và điều khiển phương ti
 └────────────────┘                   └──────────────────────┘                    └───────────────────────────┘
 ```
 
-## 🚀 1. Tổng quan Kiến trúc
+## 🚀 1. Architecture Overview / Tổng quan Kiến trúc
 
+The Python version operates with 3 core components:
 Phiên bản Python này hoạt động với 3 thành phần (module) cốt lõi:
 
-1.  **Auth Client (`auth_client.py`)**: Đảm nhiệm quá trình bắt tay (handshake) bằng HMAC-SHA256 qua TCP để xác thực danh tính Drone với máy chủ. Nó duy trì `SessionToken` và gửi các gói tin Heartbeat để giữ kết nối.
-2.  **MAVLink Forwarder (`forwarder.py`)**: Lắng nghe và giao tiếp với mạch điều khiển bay (Pixhawk/Cube) thông qua cổng Serial (UART) hoặc TCP/UDP. Data nhận được sẽ được đóng gói và gửi lên Fleet Server qua giao thức UDP.
-3.  **Web Server (`web_server.py`)**: Chạy một web API siêu nhẹ (Flask) ở port 8080 để giám sát trạng thái (`/api/status`) theo thời gian thực (real-time).
+1.  **Auth Client (`auth_client.py`)**: Handles the HMAC-SHA256 handshake over TCP to authenticate the drone with the server. It maintains the `SessionToken` and sends Heartbeat packets to keep the connection alive.
+    (Đảm nhiệm quá trình bắt tay (handshake) bằng HMAC-SHA256 qua TCP để xác thực danh tính Drone với máy chủ. Nó duy trì `SessionToken` và gửi các gói tin Heartbeat để giữ kết nối.)
+2.  **MAVLink Forwarder (`forwarder.py`)**: Listens and communicates with the flight controller (Pixhawk/Cube) via Serial (UART) or TCP/UDP. Received data is encapsulated and forwarded to the Fleet Server via UDP.
+    (Lắng nghe và giao tiếp với mạch điều khiển bay (Pixhawk/Cube) thông qua cổng Serial (UART) hoặc TCP/UDP. Data nhận được sẽ được đóng gói và gửi lên Fleet Server qua giao thức UDP.)
+3.  **Web Server (`web_server.py`)**: Runs a lightweight Web API (Flask) on port 8080 for real-time status monitoring (`/api/status`).
+    (Chạy một web API siêu nhẹ (Flask) ở port 8080 để giám sát trạng thái (`/api/status`) theo thời gian thực.)
 
 ---
 
-## 🛠️ 2. Hướng dẫn Môi trường và Triển khai (Deploy)
+## 🛠️ 2. Environment & Deployment Guide / Hướng dẫn Triển khai
 
-Để chạy hệ thống một cách tối ưu và không ảnh hưởng đến các thư viện Python của OS, chúng ta sẽ sử dụng Môi trường ảo (Virtual Environment - `venv`).
+To run the system optimally without affecting OS Python libraries, we use a Virtual Environment (`venv`).
+Để chạy hệ thống một cách tối ưu, chúng ta sẽ sử dụng Môi trường ảo (`venv`).
 
-### Bước 1: Chuẩn bị mã nguồn và môi trường
+### Step 1: Prepare source and environment / Chuẩn bị mã nguồn
 ```bash
 # Clone source code
-git clone <URL_REPO_CUA_BAN>
+git clone <YOUR_REPO_URL>
 cd UAVLink-Edge-Python
 
-# Tạo môi trường ảo (Khuyên dùng)
+# Create virtual environment / Tạo môi trường ảo
 python3 -m venv venv
 
-# Kích hoạt môi trường ảo
+# Activate virtual environment / Kích hoạt môi trường ảo
 source venv/bin/activate
 ```
 
-### Bước 2: Cài đặt các thư viện phụ thuộc (Dependencies)
+### Step 2: Install Dependencies / Cài đặt thư viện
 ```bash
-# Đảm bảo pip đang được cập nhật
+# Upgrade pip / Cập nhật pip
 pip install --upgrade pip
 
-# Cài đặt các thư viện cần thiết
+# Install required libraries / Cài đặt thư viện
 pip install -r requirements.txt
 ```
-*Ghi chú: Thư viện `pymavlink` là thành phần quan trọng nhất để phân tích và truyền tải gói tin MAVLink.*
+*Note: `pymavlink` is the most critical component for parsing and transmitting MAVLink packets.*
+*(Ghi chú: Thư viện `pymavlink` là thành phần quan trọng nhất để xử lý gói tin MAVLink.)*
 
-### Bước 3: Cấu hình `config.yaml`
-Bạn cần cấu hình lại file `config.yaml` nội bộ trong thư mục Python để phù hợp với phần cứng đang gắn trên Pi 5.
-Mở file `config.yaml`:
+### Step 3: Configure `config.yaml` / Cấu hình
+You need to adjust `config.yaml` to match your hardware on Pi 5.
+Bạn cần cấu hình lại file `config.yaml` để phù hợp với phần cứng trên Pi 5.
+
 ```yaml
 mavlink:
-    connection_type: "serial"    # Hoặc "tcp_client", "udp_listen"
-    serial_port: "/dev/ttyAMA0"  # Thay đổi cổng UART tương ứng trên Pi 5
-    serial_baud: 57600           # Tốc độ baudrate của Serial
+    connection_type: "serial"    # Or "tcp_client", "udp_listen"
+    serial_port: "/dev/ttyAMA0"  # UART port on Pi 5
+    serial_baud: 57600           # Serial baudrate
     
 auth:
-    uuid: "UUID-CUA-DRONE"
-    shared_secret: "SECRET-KEY-DUNG-CHUNG" # Lấy từ qcloudcontrol.com
+    uuid: "YOUR-DRONE-UUID"
+    shared_secret: "YOUR-SHARED-SECRET" # Get from qcloudcontrol.com
 ```
-*Lưu ý: Bạn cũng cần đảm bảo có file `.drone_secret` (nếu đã đăng ký) trong cùng thư mục hoặc ở thư mục cha.*
-Để lấy "SECRET-KEY-DUNG-CHUNG" . Vui lòng gởi email reuest tới hbqsolution@gmail.com
+*Note: Make sure you have the `.drone_secret` file in the same directory or parent directory if already registered.*
+*To request a "SHARED-SECRET", please send an email to: hbqsolution@gmail.com*
+*(Lưu ý: Để lấy "SECRET-KEY-DUNG-CHUNG", vui lòng gửi email request tới hbqsolution@gmail.com)*
 
-### Bước 4: Chạy ứng dụng
-Do phiên bản này được thiết kế để chạy như một "process bình thường", không cần systemd service phức tạp:
-
+### Step 4: Run Application / Chạy ứng dụng
 ```bash
-# Chạy trực tiếp (để debug)
+# Direct run (for debugging) / Chạy trực tiếp để debug
 python3 main.py
 
-# Hoặc chạy ẩn dưới background sử dụng nohup
+# Run in background / Chạy ẩn
 nohup python3 main.py > uavlink.log 2>&1 &
 ```
 
-Trạng thái hệ thống thiết bị có thể kiểm tra qua URL:
-👉 `http://<IP_PI_5>:8080/api/status`
+Check system status / Kiểm tra trạng thái:
+👉 `http://<PI_5_IP>:8080/api/status`
 
 ---
 
-## 💻 3. Hướng dẫn Phát triển thêm (Development Guide)
+## 💻 3. Development Guide / Hướng dẫn Phát triển
 
-Để các developer dễ dàng mở rộng và thêm các module mới vào dự án, cấu trúc mã nguồn được quy hoạch rõ ràng:
+### MAVLink Port & Routing (`forwarder.py`)
+- All MAVLink logic is contained in the `Forwarder` class.
+- To add internal logic (e.g., packet filtering, custom headers), modify `uplink_loop()` and `downlink_loop()`.
+- `self.pixhawk_conn` holds the hardware connection. Use `self.pixhawk_conn.write(data)` for commands (ARM/DISARM, param changes).
 
-### Cổng MAVLink & Routing (`forwarder.py`)
-- Mọi logic MAVLink đều gom vào class `Forwarder`.
-- Nếu cần thêm các logic nội bộ (ví dụ: bọc thêm header, lọc tin nhắn MSG_ID nhất định không gửi lên server), hãy sửa hàm `uplink_loop()` và `downlink_loop()`.
-- Biến `self.pixhawk_conn` giữ kết nối với Hardware. Mọi lệnh ghi (ví dụ: đổi tham số, ARM/DISARM) đều có thể gọi qua `self.pixhawk_conn.write(data)`.
-
-### Tích hợp thêm API Web (`web_server.py`)
-- Nếu bạn cần viết một app riêng tư để điều khiển tính năng cục bộ trên drone qua WiFi (ví dụ: Tool Calib ESC), hãy mở `web_server.py`.
-- Thêm endpoint bằng thư viện Flask mặc định của module:
+### Web API Integration (`web_server.py`)
+- For local drone features over WiFi (e.g., ESC Calib tool), modify `web_server.py`.
+- Add endpoints using Flask:
   ```python
   @app.route('/api/custom_action', methods=['POST'])
   def custom_action():
-      # Viết code tương tác với Pixhawk tại đây
+      # Interaction code with Pixhawk here
       return jsonify({"success": True})
   ```
 
-### Quy trình Xác thực (Authentication)
-Phiên bản Python này tuân thủ đúng quy trình bắt tay 4 bước :
-1.  **Gửi UUID**: Drone kết nối đến server TCP (Port 5770 mặc định) và gửi gói `0x01` kèm UUID.
-2.  **Nhận Thử thách**: Server trả về gói `0x02` kèm `Nonce`.
-3.  **Ký chữ ký**: Drone lấy mã khóa `SHA256(SecretKey + SharedSecret)` làm chìa khóa HMAC để mã hóa `Nonce`, kèm theo `Timestamp` thành gói `0x03` gửi ngược lại.
-4.  **Nhận Token**: Server xác nhận chữ ký. Trả về gói `0x04` kèm thẻ `SessionToken`. Các tiến trình UDP kế tiếp sẽ dùng `SessionToken` này để chứng minh quyền hợp lệ.
-Logic này được đóng gói gọn trong `auth_client.py`, dev **không nên** tự thay đổi phần mã hóa (hashlib/hmac) trừ khi Fleet Server có bản nâng cấp protocol mới.
+### Authentication Process / Quy trình Xác thực
+The Python version follows the 4-step handshake:
+1.  **Send UUID**: Drone connects to TCP (Port 5770) and sends `0x01` + UUID.
+2.  **Receive Challenge**: Server returns `0x02` + `Nonce`.
+3.  **Sign Signature**: Drone uses `SHA256(SecretKey + SharedSecret)` as the HMAC key to sign the `Nonce` + `Timestamp` (packet `0x03`).
+4.  **Receive Token**: Server verifies and returns `0x04` + `SessionToken`. Subsequent UDP processes use this token for valid permission.
 
-## Cấu trúc thư mục
+---
+
+## Directory Structure / Cấu trúc thư mục
 
 ```
 UAVLink-Edge-Python/
-├── auth_client.py      # Module xác thực HMAC bảo mật an toàn
-├── config.py           # Parser file YAML cho logic toàn hệ thống
-├── config.yaml         # File cấu hình nội bộ trên máy
-├── forwarder.py        # Module Bridge MAVLink bằng `pymavlink`
-├── main.py             # Entrypoint chính của chương trình
-├── README.md           # Tài liệu hướng dẫn bạn đang đọc
-├── requirements.txt    # Danh sách thư viện PIP
+├── auth_client.py      # Secure HMAC authentication module
+├── config.py           # YAML configuration parser
+├── config.yaml         # Local configuration file
+├── forwarder.py        # MAVLink Bridge using `pymavlink`
+├── main.py             # Main entry point
+├── README.md           # Documentation
+├── requirements.txt    # PIP dependencies
 └── web_server.py       # Mini API Framework (Flask)
 ```
+
+---
+
+## Tiếng Việt
+
+(Nội dung tiếng Việt tương tự như trên đã được lồng ghép song ngữ)
