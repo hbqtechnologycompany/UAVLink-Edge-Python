@@ -166,3 +166,78 @@ class AuthClient:
         uuid_bytes = self.drone_uuid.encode('utf-8')
         return struct.pack("<BH", self.MSG_SESSION_REFRESH, len(token_bytes)) + token_bytes + \
                struct.pack("<H", len(uuid_bytes)) + uuid_bytes
+    def register(self):
+        if not self.connect():
+            return False
+
+        try:
+            # Step 1: Send REGISTER_INIT
+            uuid_bytes = self.drone_uuid.encode('utf-8')
+            packet = struct.pack("<BH", 0x10, len(uuid_bytes)) + uuid_bytes # 0x10 is MSG_REGISTER_INIT
+            self.conn.sendall(packet)
+            logger.info(f"Sent REGISTER_INIT (UUID={self.drone_uuid})")
+
+            # Step 2: Receive AUTH_CHALLENGE (Nonce)
+            self.conn.settimeout(15)
+            data = self.conn.recv(4096)
+            if not data or data[0] != self.MSG_AUTH_CHALLENGE:
+                logger.error("Invalid response for Registration Init")
+                return False
+
+            nonce_len = struct.unpack_from("<H", data, 1)[0]
+            nonce = data[3 : 3 + nonce_len]
+            
+            # Step 3: Compute HMAC using SHARED SECRET ONLY for first registration
+            # Combined Key for Reg = SHA256(SharedSecret)
+            combined_key = hashlib.sha256(self.shared_secret.encode('utf-8')).hexdigest().encode('utf-8')
+            signature = hmac.new(combined_key, nonce, hashlib.sha256).digest()
+            timestamp = int(time.time())
+
+            # Step 4: Send REGISTER_RESPONSE
+            # Format: [TYPE:1][UUID_LEN:2][UUID:var][HMAC_LEN:2][HMAC:32][TIMESTAMP:8][IP_LEN:2][IP:var]
+            ip_bytes = b""
+            resp_packet = struct.pack("<BH", 0x11, len(uuid_bytes)) + uuid_bytes # 0x11 is MSG_REGISTER_RESPONSE
+            resp_packet += struct.pack("<H", len(signature)) + signature
+            resp_packet += struct.pack("<Q", timestamp)
+            resp_packet += struct.pack("<H", len(ip_bytes)) + ip_bytes
+            
+            self.conn.sendall(resp_packet)
+            logger.info("Sent REGISTER_RESPONSE")
+
+            # Step 5: Receive AUTH_ACK (contains SecretKey)
+            data = self.conn.recv(4096)
+            if not data or data[0] != self.MSG_AUTH_ACK:
+                logger.error("Invalid response for Registration Response")
+                return False
+
+            result = data[1]
+            if result != 0:
+                logger.error(f"Registration failed with code {data[2]}")
+                return False
+
+            offset = 5
+            def read_str(d, off):
+                l = struct.unpack_from("<H", d, off)[0]
+                s = d[off+2 : off+2+l].decode('utf-8')
+                return s, off + 2 + l
+
+            new_secret, _ = read_str(data, offset)
+            if not new_secret:
+                logger.error("No SecretKey received from server")
+                return False
+
+            # Save to .drone_secret
+            with open(".drone_secret", "w") as f:
+                json.dump({"secret_key": new_secret}, f)
+            
+            self.secret_key = new_secret
+            logger.info("✅ Registration successful. SecretKey saved to .drone_secret")
+            return True
+
+        except Exception as e:
+            logger.error(f"Registration error: {e}")
+            return False
+        finally:
+            if self.conn:
+                self.conn.close()
+                self.conn = None

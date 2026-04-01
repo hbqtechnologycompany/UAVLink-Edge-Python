@@ -15,11 +15,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MAIN")
 
+import argparse
+
 def signal_handler(sig, frame):
     logger.info("👋 Shutting down...")
     sys.exit(0)
 
 def main():
+    parser = argparse.ArgumentParser(description="UAVLink-Edge (Python Version)")
+    parser.add_argument("--register", action="store_true", help="Register drone with server to get SecretKey")
+    args = parser.parse_args()
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
@@ -47,6 +53,15 @@ def main():
     
     fwd = Forwarder(cfg, auth)
     
+    # Start components
+    if args.register:
+        logger.info("Registering drone...")
+        if auth.register():
+            logger.info("✅ Registration successful. You can now run without --register")
+        else:
+            logger.error("❌ Registration failed")
+        sys.exit(0)
+
     # Start web server
     start_server(cfg.web.get('port', 8080), fwd.stats, auth)
 

@@ -82,18 +82,30 @@ auth:
     uuid: "YOUR-DRONE-UUID"
     shared_secret: "YOUR-SHARED-SECRET" # Get from qcloudcontrol.com
 ```
-*Note: Make sure you have the `.drone_secret` file in the same directory or parent directory if already registered.*
+*Note: Make sure you have the `.drone_secret` file in the same directory or parent directory if already registered.* (Run app with --register to get the secret key from server)
 *To request a "SHARED-SECRET", please send an email to: hbqsolution@gmail.com*
-*(Lưu ý: Để lấy "SECRET-KEY-DUNG-CHUNG", vui lòng gửi email request tới hbqsolution@gmail.com)*
+*(Lưu ý: Để lấy "YOUR-SHARED-SECRET", vui lòng gửi email request tới hbqsolution@gmail.com)*
 
 ### Step 4: Run Application / Chạy ứng dụng
+
+#### First time: Register Drone / Lần đầu: Đăng ký Drone
+You need to register the drone first to get the unique `SecretKey` (saved to `.drone_secret`).
+Bạn cần đăng ký drone trước để lấy mã khóa `SecretKey` (Lưu tại file `.drone_secret`).
 ```bash
-# Direct run (for debugging) / Chạy trực tiếp để debug
+python3 main.py --register
+```
+
+#### Subsequent runs / Các lần sau
+Once registered, run directly to start the bridge.
+Sau khi đã đăng ký, chạy trực tiếp ứng dụng:
+```bash
+# Direct run / Chạy trực tiếp
 python3 main.py
 
 # Run in background / Chạy ẩn
 nohup python3 main.py > uavlink.log 2>&1 &
 ```
+
 
 Check system status / Kiểm tra trạng thái:
 👉 `http://<PI_5_IP>:8080/api/status`
@@ -116,6 +128,13 @@ Check system status / Kiểm tra trạng thái:
       # Interaction code with Pixhawk here
       return jsonify({"success": True})
   ```
+
+### Camera Stream (H.264 & RTSP)
+- **USB/CSI Camera**: Use `libcamera-vid` (Official tool for Pi 5, supports both USB and CSI):
+  ```bash
+  libcamera-vid -t 0 --inline --codec h264 --width 1280 --height 720 --framerate 30 -o rtsp://<SERVER_IP>:8554/<DRONE_UUID>
+  ```
+  *(Note: For USB camera, ensure it is recognized as `/dev/video0`. You can specify a different device using the `--camera` flag if needed.)*
 
 ### Authentication Process / Quy trình Xác thực
 The Python version follows the 4-step handshake:
