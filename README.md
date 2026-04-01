@@ -1,6 +1,6 @@
 # UAVLink-Edge (Phiên bản Python cho Pi 5)
 
-Dự án này là phiên bản clone viết bằng Python của UAVLink-Edge gốc (viết bằng Go). Vai trò cốt lõi của ứng dụng là làm cầu nối (bridge) giữa mạch điều khiển bay (Flight Controller) thông qua giao thức MAVLink và hệ thống máy chủ **qcloudstation** tại địa chỉ [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
+Dự án này là phiên bản viết bằng Python của UAVLink-Edge . Vai trò cốt lõi của ứng dụng là làm cầu nối (bridge) giữa mạch điều khiển bay (Flight Controller) thông qua giao thức MAVLink và hệ thống máy chủ **qcloudstation** tại địa chỉ [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
 
 Hệ thống cho phép người dùng giám sát và điều khiển phương tiện không người lái (UAV) gần như theo thời gian thực (near real-time) qua nền tảng đám mây (Cloud), mang đến trải nghiệm lưu loát và khả năng điều khiển từ xa tương tự như phần mềm QGroundControl truyền thống.
 
@@ -9,10 +9,10 @@ Hệ thống cho phép người dùng giám sát và điều khiển phương ti
 ### Sơ đồ khối hệ thống
 
 ```text
-┌────────────────┐      MAVLink      ┌──────────────────────┐   UDP/TCP (WiFi)   ┌──────────────────────────┐
-│ Flight         │◄─────────────────►│     UAVLink-Edge     │◄──────────────────►│   qcloudstation Server   │
+┌────────────────┐      MAVLink      ┌──────────────────────┐   UDP/TCP (WiFi)   ┌───────────────────────────┐
+│ Flight         │◄─────────────────►│     UAVLink-Edge     │◄──────────────────►│   qcloudstation Server    │
 │ Controller     │ (Serial/TCP/UDP)  │  (Raspberry Pi 5)    │                    │ (http://qcloudcontrol.com)│
-└────────────────┘                   └──────────────────────┘                    └──────────────────────────┘
+└────────────────┘                   └──────────────────────┘                    └───────────────────────────┘
 ```
 
 ## 🚀 1. Tổng quan Kiến trúc
@@ -33,7 +33,7 @@ Phiên bản Python này hoạt động với 3 thành phần (module) cốt lõ
 ```bash
 # Clone source code
 git clone <URL_REPO_CUA_BAN>
-cd UAVLink-Edge/UAVLink-Edge-Python
+cd UAVLink-Edge-Python
 
 # Tạo môi trường ảo (Khuyên dùng)
 python3 -m venv venv
@@ -63,9 +63,10 @@ mavlink:
     
 auth:
     uuid: "UUID-CUA-DRONE"
-    shared_secret: "SECRET-KEY-DUNG-CHUNG"
+    shared_secret: "SECRET-KEY-DUNG-CHUNG" # Lấy từ qcloudcontrol.com
 ```
 *Lưu ý: Bạn cũng cần đảm bảo có file `.drone_secret` (nếu đã đăng ký) trong cùng thư mục hoặc ở thư mục cha.*
+Để lấy "SECRET-KEY-DUNG-CHUNG" . Vui lòng gởi email reuest tới hbqsolution@gmail.com
 
 ### Bước 4: Chạy ứng dụng
 Do phiên bản này được thiết kế để chạy như một "process bình thường", không cần systemd service phức tạp:
@@ -103,7 +104,7 @@ Trạng thái hệ thống thiết bị có thể kiểm tra qua URL:
   ```
 
 ### Quy trình Xác thực (Authentication)
-Phiên bản Python này tuân thủ đúng quy trình bắt tay 4 bước như bản Go gốc (Do file tài liệu gốc đã bị xóa, đây là mô tả tóm tắt):
+Phiên bản Python này tuân thủ đúng quy trình bắt tay 4 bước :
 1.  **Gửi UUID**: Drone kết nối đến server TCP (Port 5770 mặc định) và gửi gói `0x01` kèm UUID.
 2.  **Nhận Thử thách**: Server trả về gói `0x02` kèm `Nonce`.
 3.  **Ký chữ ký**: Drone lấy mã khóa `SHA256(SecretKey + SharedSecret)` làm chìa khóa HMAC để mã hóa `Nonce`, kèm theo `Timestamp` thành gói `0x03` gửi ngược lại.
