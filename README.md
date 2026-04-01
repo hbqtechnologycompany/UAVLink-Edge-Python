@@ -1,6 +1,19 @@
 # UAVLink-Edge (Phiên bản Python cho Pi 5)
 
-Dự án này là phiên bản clone viết bằng Python của UAVLink-Edge gốc (viết bằng Go). Phiên bản này được thiết kế tối giản, tập trung vào việc quản lý truyền tải dữ liệu MAVLink và xác thực bảo mật với Fleet Server, đặc biệt phù hợp cho các thiết bị như Raspberry Pi 5 hoạt động chủ yếu qua mạng WiFi.
+Dự án này là phiên bản clone viết bằng Python của UAVLink-Edge gốc (viết bằng Go). Vai trò cốt lõi của ứng dụng là làm cầu nối (bridge) giữa mạch điều khiển bay (Flight Controller) thông qua giao thức MAVLink và hệ thống máy chủ **qcloudstation** tại địa chỉ [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
+
+Hệ thống cho phép người dùng giám sát và điều khiển phương tiện không người lái (UAV) gần như theo thời gian thực (near real-time) qua nền tảng đám mây (Cloud), mang đến trải nghiệm lưu loát và khả năng điều khiển từ xa tương tự như phần mềm QGroundControl truyền thống.
+
+![Giao diện điều khiển qua Cloud](images/pilot-ui.jpg)
+
+### Sơ đồ khối hệ thống
+
+```text
+┌────────────────┐      MAVLink      ┌──────────────────────┐   UDP/TCP (WiFi)   ┌──────────────────────────┐
+│ Flight         │◄─────────────────►│     UAVLink-Edge     │◄──────────────────►│   qcloudstation Server   │
+│ Controller     │ (Serial/TCP/UDP)  │  (Raspberry Pi 5)    │                    │ (http://qcloudcontrol.com)│
+└────────────────┘                   └──────────────────────┘                    └──────────────────────────┘
+```
 
 ## 🚀 1. Tổng quan Kiến trúc
 
