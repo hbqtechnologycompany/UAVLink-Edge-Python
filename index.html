@@ -1,0 +1,2268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAVLink-Edge DIY Integration Wiki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Be+Vietnam+Pro:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'ClashDisplay';
+    src: url('https://cdn.jsdelivr.net/npm/clash-display@1.0.0/fonts/ClashDisplay-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-display: swap;
+  }
+</style>
+<style>
+:root {
+  --bg: #0a0d12;
+  --bg2: #111520;
+  --bg3: #161c28;
+  --bg4: #1c2333;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e2e8f4;
+  --muted: #7a8599;
+  --dim: #4a5568;
+  --accent: #00d4aa;
+  --accent2: #7c6bff;
+  --accent3: #ff6b6b;
+  --accent4: #ffb347;
+  --teal: #00b894;
+  --purple: #6c63ff;
+  --coral: #ff6584;
+  --amber: #f0a500;
+  --green: #00cec9;
+  --code-bg: #0d1117;
+  --tag-h1: #00d4aa;
+  --tag-h2: #7c6bff;
+  --tag-h3: #ff6b6b;
+  --font-head: 'Syne', sans-serif;
+  --font-hero: 'Be Vietnam Pro', 'DM Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+/* ─── GRID NOISE ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,170,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,170,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 260px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo .wordmark {
+  font-family: var(--font-head);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-logo .wordmark .icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.sidebar-logo .sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+}
+
+.nav-section {
+  padding: 20px 12px 8px;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 400;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--bg3);
+}
+
+.nav-link.active {
+  color: var(--accent);
+  background: rgba(0,212,170,0.08);
+}
+
+.nav-link .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nav-link .badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--bg4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--muted);
+}
+
+/* ─── MAIN ─── */
+.main {
+  margin-left: 260px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── HERO ─── */
+.hero {
+  padding: 80px 64px 64px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,212,170,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  width: 20px; height: 1px;
+  background: var(--accent);
+}
+
+.hero h1 {
+  font-family: var(--font-hero);
+  font-size: clamp(34px, 4.5vw, 58px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: #fff;
+  margin-bottom: 20px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Lang-specific hero title tweaks */
+[lang="vi"] .hero h1,
+.hero h1:lang(vi) {
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+[lang="en"] .hero h1 {
+  letter-spacing: -0.04em;
+}
+
+.hero h1 span {
+  color: var(--accent);
+}
+
+/* ─── LANG SWITCHER ─── */
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+
+.lang-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lang-btn.active {
+  background: var(--bg4);
+  color: var(--accent);
+  border: 1px solid rgba(0,212,170,0.25);
+}
+
+.lang-btn:hover:not(.active) {
+  color: var(--text);
+}
+
+/* Content visibility by language */
+[data-lang] { display: none; }
+.show-vi [data-lang="vi"],
+.show-en [data-lang="en"] { display: revert; }
+/* For inline elements inside mixed content */
+span[data-lang], a[data-lang] { display: none; }
+.show-vi span[data-lang="vi"],
+.show-en span[data-lang="en"] { display: inline; }
+.show-vi a[data-lang="vi"],
+.show-en a[data-lang="en"] { display: inline; }
+
+.hero .lead {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 620px;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.hero-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid;
+}
+
+.tag-green { color: var(--accent); border-color: rgba(0,212,170,0.25); background: rgba(0,212,170,0.06); }
+.tag-purple { color: var(--accent2); border-color: rgba(124,107,255,0.25); background: rgba(124,107,255,0.06); }
+.tag-red { color: var(--accent3); border-color: rgba(255,107,107,0.25); background: rgba(255,107,107,0.06); }
+.tag-amber { color: var(--accent4); border-color: rgba(255,179,71,0.25); background: rgba(255,179,71,0.06); }
+
+/* ─── CONTENT ─── */
+.content {
+  padding: 64px;
+  max-width: 900px;
+}
+
+/* ─── SECTION ─── */
+.section {
+  margin-bottom: 80px;
+}
+
+.section-title {
+  font-family: var(--font-head);
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title .anchor-link {
+  font-size: 14px;
+  color: var(--dim);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.section-title:hover .anchor-link { opacity: 1; }
+
+.section-desc {
+  color: var(--muted);
+  margin-bottom: 32px;
+  max-width: 680px;
+}
+
+.subsection {
+  margin-bottom: 48px;
+}
+
+.subsection-title {
+  font-family: var(--font-head);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── ROUTE CARDS ─── */
+.route-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.route-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+
+.route-card:hover {
+  transform: translateY(-2px);
+}
+
+.route-card.teal { border-top: 3px solid var(--accent); }
+.route-card.teal:hover { border-color: var(--accent); }
+
+.route-card.purple { border-top: 3px solid var(--accent2); }
+.route-card.purple:hover { border-color: var(--accent2); }
+
+.route-card.coral { border-top: 3px solid var(--accent3); }
+.route-card.coral:hover { border-color: var(--accent3); }
+
+.route-card.amber { border-top: 3px solid var(--accent4); }
+.route-card.amber:hover { border-color: var(--accent4); }
+
+.route-number {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.route-card.teal .route-number { color: var(--accent); }
+.route-card.purple .route-number { color: var(--accent2); }
+.route-card.coral .route-number { color: var(--accent3); }
+.route-card.amber .route-number { color: var(--accent4); }
+
+.route-card h3 {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.route-card p {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.route-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.route-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.route-meta-key {
+  font-family: var(--font-mono);
+  color: var(--dim);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.route-meta-val { color: var(--muted); }
+
+/* ─── CODE BLOCK ─── */
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 20px 0;
+  font-family: var(--font-mono);
+}
+
+.code-header {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.code-lang {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.code-file {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.code-body {
+  padding: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+  color: #c9d1d9;
+}
+
+.code-body .c { color: #6e7681; }
+.code-body .k { color: #ff7b72; }
+.code-body .s { color: #a5d6ff; }
+.code-body .n { color: #79c0ff; }
+.code-body .v { color: var(--accent); }
+.code-body .p { color: #e6edf3; }
+.code-body .fn { color: #d2a8ff; }
+
+/* ─── STEP LIST ─── */
+.step-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0;
+}
+
+.step-list li {
+  display: flex;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  align-items: flex-start;
+  transition: border-color 0.15s;
+}
+
+.step-list li:hover { border-color: var(--border2); }
+
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-num.teal { background: rgba(0,212,170,0.15); color: var(--accent); }
+.step-num.purple { background: rgba(124,107,255,0.15); color: var(--accent2); }
+.step-num.coral { background: rgba(255,107,107,0.15); color: var(--accent3); }
+.step-num.amber { background: rgba(255,179,71,0.15); color: var(--accent4); }
+
+.step-content strong {
+  color: var(--text);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.step-content span { color: var(--muted); font-size: 13px; }
+
+/* ─── CALLOUT ─── */
+.callout {
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 20px 0;
+  border: 1px solid;
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.callout.warn {
+  background: rgba(255,179,71,0.06);
+  border-color: rgba(255,179,71,0.2);
+  color: #c9a048;
+}
+
+.callout.info {
+  background: rgba(0,212,170,0.05);
+  border-color: rgba(0,212,170,0.15);
+  color: #5fb8a8;
+}
+
+.callout.danger {
+  background: rgba(255,107,107,0.06);
+  border-color: rgba(255,107,107,0.2);
+  color: #c07070;
+}
+
+.callout strong { color: #fff; font-weight: 500; }
+
+/* ─── TABLE ─── */
+.wiki-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin: 20px 0;
+}
+
+.wiki-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.wiki-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text);
+}
+
+.wiki-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.wiki-table td:first-child { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+
+/* ─── AI AGENT GUIDE ─── */
+.agent-rule {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent2);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 18px 20px;
+  margin: 12px 0;
+}
+
+.agent-rule .rule-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent2);
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-rule p {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.agent-rule code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: rgba(255,255,255,0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+/* ─── ARCH DIAGRAM ─── */
+.arch-diagram {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: #8b949e;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 20px 0;
+}
+
+.arch-diagram .arch-h { color: var(--accent); }
+.arch-diagram .arch-box { color: var(--accent2); }
+.arch-diagram .arch-note { color: var(--amber); }
+.arch-diagram .arch-line { color: var(--dim); }
+
+/* ─── DIVIDER ─── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  margin: 60px 0;
+}
+
+/* ─── FOOTER ─── */
+.wiki-footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--dim);
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+}
+
+.wiki-footer a { color: var(--muted); text-decoration: none; }
+.wiki-footer a:hover { color: var(--accent); }
+
+/* ─── SCROLL INDICATOR ─── */
+.toc-line {
+  position: fixed;
+  left: 0; top: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--accent), var(--accent2));
+  z-index: 200;
+  transition: height 0.1s;
+}
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .hero { padding: 40px 24px; }
+  .content { padding: 32px 24px; }
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero h1, .hero .lead, .hero-tags {
+  animation: fadeUp 0.5s ease both;
+}
+.hero .lead { animation-delay: 0.08s; }
+.hero-tags  { animation-delay: 0.16s; }
+
+/* Inline code */
+code.inline {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: rgba(255,255,255,0.07);
+  padding: 1px 7px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+
+/* Highlight row */
+.hl { color: var(--accent) !important; }
+</style>
+</head>
+<body class="show-vi">
+
+<div class="toc-line" id="scrollLine"></div>
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="wordmark">
+      <div class="icon">🚁</div>
+      UAVLink-Edge
+    </div>
+    <div class="sub">DIY Integration Wiki · v5.0</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label"><span data-lang="vi">Bắt đầu</span><span data-lang="en">Getting started</span></div>
+    <a href="#overview" class="nav-link active">
+      <span class="dot" style="background:#00d4aa"></span>
+      <span data-lang="vi">Tổng quan hệ thống</span><span data-lang="en">System overview</span>
+    </a>
+    <a href="#protocol" class="nav-link">
+      <span class="dot" style="background:#7c6bff"></span>
+      <span data-lang="vi">Giao thức xác thực</span><span data-lang="en">Auth protocol</span>
+    </a>
+    <a href="#quickstart" class="nav-link">
+      <span class="dot" style="background:#00d4aa"></span>
+      <span data-lang="vi">Quickstart 5 phút</span><span data-lang="en">5-min quickstart</span>
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label"><span data-lang="vi">Hướng tích hợp</span><span data-lang="en">Integration routes</span></div>
+    <a href="#route-1" class="nav-link">
+      <span class="dot" style="background:#00d4aa"></span> Route 1 — Pixhawk/PX4
+      <span class="badge"><span data-lang="vi">Dễ</span><span data-lang="en">Easy</span></span>
+    </a>
+    <a href="#route-2" class="nav-link">
+      <span class="dot" style="background:#7c6bff"></span> Route 2 — MAVLink Emitter
+      <span class="badge"><span data-lang="vi">TB</span><span data-lang="en">Mid</span></span>
+    </a>
+    <a href="#route-3" class="nav-link">
+      <span class="dot" style="background:#ff6b6b"></span> Route 3 — ROS2 / MAVROS
+      <span class="badge"><span data-lang="vi">TB</span><span data-lang="en">Mid</span></span>
+    </a>
+    <a href="#route-4" class="nav-link">
+      <span class="dot" style="background:#ffb347"></span> Route 4 — Protocol Bridge
+      <span class="badge"><span data-lang="vi">Khó</span><span data-lang="en">Hard</span></span>
+    </a>
+    <a href="#route-5" class="nav-link">
+      <span class="dot" style="background:#ff6584"></span> Route 5 — RC + Video
+      <span class="badge"><span data-lang="vi">TB</span><span data-lang="en">Mid</span></span>
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label"><span data-lang="vi">Phần cứng</span><span data-lang="en">Hardware</span></div>
+    <a href="#hardware" class="nav-link">
+      <span class="dot" style="background:#5fb8a8"></span>
+      <span data-lang="vi">Bảng phần cứng hỗ trợ</span><span data-lang="en">Supported hardware</span>
+    </a>
+    <a href="#wiring" class="nav-link">
+      <span class="dot" style="background:#5fb8a8"></span>
+      <span data-lang="vi">Sơ đồ đấu nối</span><span data-lang="en">Wiring diagram</span>
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">AI Agent Guide</div>
+    <a href="#agent-guide" class="nav-link">
+      <span class="dot" style="background:#ff6584"></span> Codebase map
+    </a>
+    <a href="#agent-rules" class="nav-link">
+      <span class="dot" style="background:#ff6584"></span>
+      <span data-lang="vi">Quy tắc sửa code</span><span data-lang="en">Coding rules</span>
+    </a>
+    <a href="#agent-tasks" class="nav-link">
+      <span class="dot" style="background:#ff6584"></span> Task templates
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label"><span data-lang="vi">Tham khảo</span><span data-lang="en">Reference</span></div>
+    <a href="#config-ref" class="nav-link">
+      <span class="dot" style="background:#6e7681"></span> config.yaml
+    </a>
+    <a href="#troubleshoot" class="nav-link">
+      <span class="dot" style="background:#6e7681"></span> Troubleshooting
+    </a>
+  </div>
+</aside>
+
+<!-- ─── MAIN ─── -->
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">DIY Integration Wiki</div>
+
+    <!-- Language switcher -->
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('vi')" id="btn-vi">VI</button>
+      <button class="lang-btn" onclick="setLang('en')" id="btn-en">EN</button>
+    </div>
+
+    <h1>
+      <span data-lang="vi">Kết nối mọi drone &amp;<br><span>robot</span> lên qcloudstation</span>
+      <span data-lang="en">Connect any drone &amp;<br><span>robot</span> to qcloudstation</span>
+    </h1>
+    <p class="lead">
+      <span data-lang="vi">Hướng dẫn toàn diện từ clone repo đến production — 5 hướng tích hợp cho mọi cấp độ kỹ thuật, từ Pixhawk chuẩn đến robot tự chế hoàn toàn với RC receiver và video stream. Bao gồm hướng dẫn cho AI agent sửa codebase.</span>
+      <span data-lang="en">Complete guide from clone to production — 5 integration routes for every skill level, from standard Pixhawk to fully custom robots with RC receivers and live video. Includes an AI agent guide for modifying the codebase.</span>
+    </p>
+    <div class="hero-tags">
+      <span class="tag tag-green">Python 3.10+</span>
+      <span class="tag tag-green">pymavlink</span>
+      <span class="tag tag-purple">Raspberry Pi 5</span>
+      <span class="tag tag-purple">ESP32</span>
+      <span class="tag tag-red">ROS2 Humble</span>
+      <span class="tag tag-amber">HMAC-SHA256</span>
+      <span class="tag tag-amber">MAVLink v2</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ─── OVERVIEW ─── -->
+    <section class="section" id="overview">
+      <div class="section-title">
+        <span data-lang="vi">Tổng quan hệ thống</span>
+        <span data-lang="en">System overview</span>
+        <a href="#overview" class="anchor-link">#</a>
+      </div>
+      <p class="section-desc">
+        <span data-lang="vi">UAVLink-Edge là phần mềm chạy trên companion computer (thường là Raspberry Pi), đóng vai trò cầu nối giữa flight controller và cloud server qcloudstation.</span>
+        <span data-lang="en">UAVLink-Edge runs on a companion computer (typically Raspberry Pi), bridging the flight controller and the qcloudstation cloud server.</span>
+      </p>
+
+      <div class="arch-diagram"><span class="arch-h">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="arch-h">│                    LUỒNG DỮ LIỆU TỔNG QUAN                      │</span>
+<span class="arch-h">└─────────────────────────────────────────────────────────────────┘</span>
+
+<span class="arch-box">  [Flight Controller]</span>   <span class="arch-line">──Serial/UART/UDP──►</span>   <span class="arch-box">[UAVLink-Edge.py]</span>
+<span class="arch-note">   Pixhawk / Custom FC                                 Raspberry Pi</span>
+
+                                                   │  auth_client.py
+                                                   │  TCP :5770 ──► HMAC Handshake
+                                                   │  ◄── Session Token
+                                                   │
+                                                   │  forwarder.py
+                                                   │  UDP :14550 ──► MAVLink frames
+                                                   │  ◄── Commands (ARM/DISARM/...)
+                                                   │
+                                                   │  heartbeat_loop
+                                                   │  UDP 1Hz ──► MSG_SESSION_REFRESH
+
+<span class="arch-box">  [qcloudstation]</span>        <span class="arch-line">◄────────────────────</span>   <span class="arch-box">[Hybrid Router]</span>
+<span class="arch-note">   Fleet Dashboard UI           Redis Pub/Sub            Go server</span>
+<span class="arch-note">   http://qcloudcontrol.com     TCP :5760 (QGC)          :8001 WebSocket</span></div>
+
+      <div class="callout info">
+        <div class="callout-icon">ℹ</div>
+        <div>
+          <span data-lang="vi"><strong>Điểm mấu chốt về xác thực:</strong> <code class="inline">auth_client.py</code> và <code class="inline">forwarder.py</code> là 2 file cốt lõi. Mọi hướng tích hợp đều tái sử dụng 2 file này — chỉ thay đổi <em>nguồn MAVLink</em> đầu vào.</span>
+          <span data-lang="en"><strong>Key insight:</strong> <code class="inline">auth_client.py</code> and <code class="inline">forwarder.py</code> are the two core files. Every integration route reuses them — you only change the <em>MAVLink source</em> input.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── PROTOCOL ─── -->
+    <section class="section" id="protocol">
+      <div class="section-title">
+        <span data-lang="vi">Giao thức xác thực (HMAC 2 lớp)</span>
+        <span data-lang="en">Auth protocol (2-layer HMAC)</span>
+        <a href="#protocol" class="anchor-link">#</a>
+      </div>
+      <p class="section-desc">
+        <span data-lang="vi">4 bước handshake qua TCP. Hiểu rõ để debug và tích hợp đúng.</span>
+        <span data-lang="en">4-step TCP handshake. Essential knowledge for debugging and correct integration.</span>
+      </p>
+
+      <table class="wiki-table">
+        <thead>
+          <tr>
+            <th>Bước</th><th>Msg</th><th>Hướng</th><th>Payload</th><th>Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code class="inline">0x01 AUTH_INIT</code></td><td>Drone → Server</td><td><code class="inline">[UUID_LEN:2][UUID:var]</code></td><td>Gửi drone UUID để server biết cần verify ai</td></tr>
+          <tr><td>2</td><td><code class="inline">0x02 AUTH_CHALLENGE</code></td><td>Server → Drone</td><td><code class="inline">[NONCE_LEN:2][NONCE:var][TIMEOUT:2]</code></td><td>Nonce ngẫu nhiên chống replay attack</td></tr>
+          <tr><td>3</td><td><code class="inline">0x03 AUTH_RESPONSE</code></td><td>Drone → Server</td><td><code class="inline">[UUID][HMAC:32][TIMESTAMP:8][IP]</code></td><td>HMAC ký nonce bằng combined_key</td></tr>
+          <tr><td>4</td><td><code class="inline">0x04 AUTH_ACK</code></td><td>Server → Drone</td><td><code class="inline">[RESULT:1][TOKEN:var][EXP:8][INT:2]</code></td><td>Nhận session token, TTL thường 90–300s</td></tr>
+        </tbody>
+      </table>
+
+      <div class="subsection">
+        <div class="subsection-title">🔑 Công thức HMAC (source of truth: auth_client.py)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">auth_client.py → authenticate()</span></div>
+          <div class="code-body"><span class="c"># Bước 1: Tạo combined key từ 2 nguồn secret</span>
+combined_key_seed = (self.secret_key + self.shared_secret).encode(<span class="s">'utf-8'</span>)
+combined_key      = hashlib.sha256(combined_key_seed).hexdigest().encode(<span class="s">'utf-8'</span>)
+
+<span class="c"># Bước 2: HMAC-SHA256 ký lên nonce từ server</span>
+signature = hmac.new(combined_key, nonce, hashlib.sha256).digest()
+
+<span class="c"># Giải thích bảo mật:</span>
+<span class="c"># - secret_key: lưu trong .drone_secret (kết quả từ lần đăng ký)</span>
+<span class="c"># - shared_secret: config.yaml — cấp bởi qcloudstation</span>
+<span class="c"># - Nonce: mỗi lần auth khác nhau → chống replay attack</span>
+<span class="c"># - Timestamp: gửi kèm trong AUTH_RESPONSE, server từ chối nếu lệch >60s</span></div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠</div>
+        <div><strong>Inconsistency trong tài liệu:</strong> README cấp cao (hệ thống) ghi formula khác: <code class="inline">HMAC(shared_secret, "{droneID}:{nonceHex}:{timestamp}")</code>. Đây là formula của Hybrid Router Go server, KHÔNG phải Python client. Luôn tin vào <code class="inline">auth_client.py</code> khi viết Python.</div>
+      </div>
+    </section>
+
+    <!-- ─── QUICKSTART ─── -->
+    <section class="section" id="quickstart">
+      <div class="section-title">
+        <span data-lang="vi">Quickstart — Online trong 5 phút</span>
+        <span data-lang="en">Quickstart — Online in 5 minutes</span>
+        <a href="#quickstart" class="anchor-link">#</a>
+      </div>
+      <p class="section-desc">
+        <span data-lang="vi">Với Pixhawk/Cube + Raspberry Pi đã có sẵn.</span>
+        <span data-lang="en">For users already owning a Pixhawk/Cube + Raspberry Pi.</span>
+      </p>
+
+      <ol class="step-list">
+        <li>
+          <div class="step-num teal">1</div>
+          <div class="step-content">
+            <strong><span data-lang="vi">Clone repo và cài dependencies</span><span data-lang="en">Clone repo and install dependencies</span></strong>
+            <span>
+              <br>
+              <code class="inline">git clone https://github.com/your-org/UAVLink-Edge-Python</code><br>
+              <code class="inline">cd UAVLink-Edge-Python && python3 -m venv venv && source venv/bin/activate</code><br>
+              <code class="inline">pip install -r requirements.txt</code>
+            </span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num teal">2</div>
+          <div class="step-content">
+            <strong><span data-lang="vi">Xin credentials từ qcloudstation</span><span data-lang="en">Request credentials from qcloudstation</span></strong>
+            <span><span data-lang="vi">Email <code class="inline">hbqsolution@gmail.com</code> để nhận <code class="inline">shared_secret</code> và <code class="inline">uuid</code> cho drone của bạn.</span><span data-lang="en">Email <code class="inline">hbqsolution@gmail.com</code> to receive your drone's <code class="inline">shared_secret</code> and <code class="inline">uuid</code>.</span></span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num teal">3</div>
+          <div class="step-content">
+            <strong><span data-lang="vi">Sửa config.yaml</span><span data-lang="en">Edit config.yaml</span></strong>
+            <span><span data-lang="vi">Điền <code class="inline">uuid</code>, <code class="inline">shared_secret</code>, <code class="inline">serial_port</code> đúng với phần cứng Pi của bạn (<code class="inline">/dev/ttyAMA0</code> hoặc <code class="inline">/dev/ttyUSB0</code>).</span><span data-lang="en">Fill in your <code class="inline">uuid</code>, <code class="inline">shared_secret</code>, and <code class="inline">serial_port</code> matching your Pi hardware (<code class="inline">/dev/ttyAMA0</code> or <code class="inline">/dev/ttyUSB0</code>).</span></span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num teal">4</div>
+          <div class="step-content">
+            <strong><span data-lang="vi">Chạy lần đầu và đăng ký</span><span data-lang="en">First run and registration</span></strong>
+            <span><code class="inline">python3 main.py</code> — <span data-lang="vi">Lần đầu sẽ tạo file <code class="inline">.drone_secret</code> sau khi đăng ký thành công. Giữ file này an toàn.</span><span data-lang="en">First run creates <code class="inline">.drone_secret</code> after successful registration. Keep this file safe.</span></span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num teal">5</div>
+          <div class="step-content">
+            <strong><span data-lang="vi">Kiểm tra trạng thái</span><span data-lang="en">Check status</span></strong>
+            <span><span data-lang="vi">Mở trình duyệt:</span><span data-lang="en">Open browser:</span> <code class="inline">http://&lt;PI_IP&gt;:8080/api/status</code> — <span data-lang="vi">xem session token và stats.</span><span data-lang="en">view session token and stats.</span></span>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ─── 4 ROUTES ─── -->
+    <section class="section" id="routes-overview">
+      <div class="section-title">
+        <span data-lang="vi">5 Hướng tích hợp DIY</span>
+        <span data-lang="en">5 DIY integration routes</span>
+        <a href="#routes-overview" class="anchor-link">#</a>
+      </div>
+      <p class="section-desc">
+        <span data-lang="vi">Chọn theo phần cứng và mức độ tùy biến bạn cần.</span>
+        <span data-lang="en">Choose based on your hardware and how much customization you need.</span>
+      </p>
+
+      <div class="route-cards">
+        <div class="route-card teal">
+          <div class="route-number">ROUTE 01 — <span>★☆☆</span></div>
+          <h3>Pixhawk / ArduPilot / PX4</h3>
+          <p><span data-lang="vi">FC chuẩn MAVLink, nối serial UART với Pi. Clone repo, sửa config, chạy. Không cần code thêm.</span><span data-lang="en">Standard MAVLink FC, serial UART to Pi. Clone, edit config, run. No extra code needed.</span></p>
+          <div class="route-meta">
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thời gian</span><span data-lang="en">Time</span></span><span class="route-meta-val"><span data-lang="vi">~1 ngày</span><span data-lang="en">~1 day</span></span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Phần cứng</span><span data-lang="en">Hardware</span></span><span class="route-meta-val">Pixhawk 6C, Cube Orange, Holybro</span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thay đổi</span><span data-lang="en">Changes</span></span><span class="route-meta-val">config.yaml only</span></div>
+          </div>
+        </div>
+        <div class="route-card purple">
+          <div class="route-number">ROUTE 02 — <span>★★☆</span></div>
+          <h3>MAVLink Emitter <span data-lang="vi">tùy chỉnh</span><span data-lang="en">custom</span></h3>
+          <p><span data-lang="vi">FC/MCU không chuẩn MAVLink (Arduino, ESP32, STM32). Viết emitter nhẹ, tái dùng forwarder.py.</span><span data-lang="en">Non-MAVLink FC/MCU (Arduino, ESP32, STM32). Write a lightweight emitter, reuse forwarder.py.</span></p>
+          <div class="route-meta">
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thời gian</span><span data-lang="en">Time</span></span><span class="route-meta-val"><span data-lang="vi">~3–7 ngày</span><span data-lang="en">~3–7 days</span></span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Phần cứng</span><span data-lang="en">Hardware</span></span><span class="route-meta-val">Arduino Mega, ESP32, STM32</span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thay đổi</span><span data-lang="en">Changes</span></span><span class="route-meta-val"><span data-lang="vi">Thêm</span><span data-lang="en">Add</span> mavlink_emitter.py</span></div>
+          </div>
+        </div>
+        <div class="route-card coral">
+          <div class="route-number">ROUTE 03 — <span>★★☆</span></div>
+          <h3>ROS2 / MAVROS Bridge</h3>
+          <p><span data-lang="vi">Robot dùng ROS2 — dùng MAVROS để bridge ROS topics sang MAVLink, sau đó feed vào forwarder.py.</span><span data-lang="en">ROS2 robots — use MAVROS to bridge ROS topics to MAVLink, then feed into forwarder.py.</span></p>
+          <div class="route-meta">
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thời gian</span><span data-lang="en">Time</span></span><span class="route-meta-val"><span data-lang="vi">~1–2 tuần</span><span data-lang="en">~1–2 weeks</span></span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Phần cứng</span><span data-lang="en">Hardware</span></span><span class="route-meta-val">Jetson Nano/Orin, PC Linux</span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thay đổi</span><span data-lang="en">Changes</span></span><span class="route-meta-val"><span data-lang="vi">Thêm</span><span data-lang="en">Add</span> ros2_bridge.py</span></div>
+          </div>
+        </div>
+        <div class="route-card amber">
+          <div class="route-number">ROUTE 04 — <span>★★★</span></div>
+          <h3>Full Protocol Bridge</h3>
+          <p><span data-lang="vi">Thiết bị không MAVLink hoàn toàn. Fork forwarder.py, thêm custom parser, wrap payload riêng.</span><span data-lang="en">Fully non-MAVLink devices. Fork forwarder.py, add custom parser, wrap your own payload.</span></p>
+          <div class="route-meta">
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thời gian</span><span data-lang="en">Time</span></span><span class="route-meta-val"><span data-lang="vi">~1 tháng+</span><span data-lang="en">~1 month+</span></span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Phần cứng</span><span data-lang="en">Hardware</span></span><span class="route-meta-val"><span data-lang="vi">Bất kỳ</span><span data-lang="en">Any device</span></span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thay đổi</span><span data-lang="en">Changes</span></span><span class="route-meta-val">Fork Forwarder + custom module</span></div>
+          </div>
+        </div>
+        <div class="route-card" style="border-top:3px solid #ff6584;border-color:rgba(255,101,132,0.3)">
+          <div class="route-number" style="color:#ff6584">ROUTE 05 — <span>★★☆ / ★★★</span></div>
+          <h3>RC Receiver + Video Camera</h3>
+          <p><span data-lang="vi">Bộ thu RC (SBUS/CRSF/ExpressLRS) + camera stream H.264. 2 sub-route: có FC hoặc Pi đọc RC trực tiếp.</span><span data-lang="en">RC receiver (SBUS/CRSF/ExpressLRS) + H.264 camera stream. Two sub-routes: with FC or Pi reads RC directly.</span></p>
+          <div class="route-meta">
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thời gian</span><span data-lang="en">Time</span></span><span class="route-meta-val"><span data-lang="vi">5A: ~2 ngày · 5B: ~2 tuần</span><span data-lang="en">5A: ~2 days · 5B: ~2 weeks</span></span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Phần cứng</span><span data-lang="en">Hardware</span></span><span class="route-meta-val">ELRS/FrSky Rx, Pi Cam 3 / USB cam</span></div>
+            <div class="route-meta-item"><span class="route-meta-key"><span data-lang="vi">Thay đổi</span><span data-lang="en">Changes</span></span><span class="route-meta-val"><span data-lang="vi">Thêm</span><span data-lang="en">Add</span> rc_reader.py + video_streamer.py</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ROUTE 1 ─── -->
+    <section class="section" id="route-1">
+      <div class="section-title">Route 1 — Pixhawk / ArduPilot / PX4 <a href="#route-1" class="anchor-link">#</a></div>
+      <p class="section-desc">Hướng dễ nhất. FC nói MAVLink native, repo đã xử lý toàn bộ.</p>
+
+      <div class="subsection">
+        <div class="subsection-title">Sơ đồ kết nối</div>
+        <div class="arch-diagram"><span class="arch-box">  Pixhawk 6C</span>                <span class="arch-box">Raspberry Pi 5</span>
+  <span class="arch-note">TELEM2 port</span>
+       │                          │
+       │ UART (TX→RX, RX→TX)     │
+       └──────────────────────────┘  <span class="arch-note">/dev/ttyAMA0 @ 57600</span>
+                                 │
+                          main.py ─── auth_client.py (TCP:5770)
+                                 └── forwarder.py (UDP:14550)</div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">config.yaml cho Route 1</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">YAML</span><span class="code-file">config.yaml</span></div>
+          <div class="code-body">auth:
+    host: <span class="s">"45.117.171.237"</span>
+    port: 5770
+    uuid: <span class="s">"YOUR-DRONE-UUID"</span>             <span class="c"># Lấy từ qcloudstation</span>
+    shared_secret: <span class="s">"YOUR-SHARED-SECRET"</span>  <span class="c"># Lấy từ qcloudstation</span>
+    keepalive_interval: 30
+
+mavlink:
+    connection_type: <span class="s">"serial"</span>          <span class="c"># UART với Pixhawk</span>
+    serial_port: <span class="s">"/dev/ttyAMA0"</span>        <span class="c"># Pi 5: ttyAMA0, USB: ttyUSB0</span>
+    serial_baud: 57600               <span class="c"># Pixhawk TELEM2 mặc định</span>
+
+forwarding:
+    target_host: <span class="s">"45.117.171.237"</span>     <span class="c"># IP server qcloudstation</span>
+    target_port: 14550</div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Các kiểu kết nối hỗ trợ sẵn</div>
+        <table class="wiki-table">
+          <thead><tr><th>connection_type</th><th>Dùng khi nào</th><th>Config thêm</th></tr></thead>
+          <tbody>
+            <tr><td>serial</td><td>UART trực tiếp Pi ↔ Pixhawk TELEM port</td><td>serial_port, serial_baud</td></tr>
+            <tr><td>udp_listen</td><td>SITL simulation hoặc WiFi telemetry</td><td>tcp_port (dùng làm UDP port)</td></tr>
+            <tr><td>tcp_client</td><td>Kết nối vào MAVProxy/mission planner</td><td>tcp_host, tcp_port</td></tr>
+            <tr><td>tcp_listen</td><td>Để FC kết nối vào Pi (FC là client)</td><td>tcp_host, tcp_port</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── ROUTE 2 ─── -->
+    <section class="section" id="route-2">
+      <div class="section-title">Route 2 — MAVLink Emitter tùy chỉnh <a href="#route-2" class="anchor-link">#</a></div>
+      <p class="section-desc">Cho Arduino, ESP32, STM32 — bất kỳ MCU nào không native MAVLink. Viết emitter Python chạy cùng trên Pi, giả lập một FC chuẩn.</p>
+
+      <div class="subsection">
+        <div class="subsection-title">Kiến trúc</div>
+        <div class="arch-diagram"><span class="arch-box">  Arduino Mega / ESP32</span>     <span class="arch-box">Raspberry Pi 5</span>
+  <span class="arch-note">Custom sensors, motors</span>    ┌──────────────────────────────┐
+       │                        │  mavlink_emitter.py          │
+       │ Serial / I2C / SPI     │  ↑ đọc từ hardware           │
+       └────────────────────────│  ↓ phát MAVLink UDP local   │
+                                │  UDP 127.0.0.1:14540         │
+                                │          ▼                   │
+                                │  forwarder.py (udp_listen)   │
+                                │  auth_client.py (TCP:5770)   │
+                                └──────────────────────────────┘</div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">mavlink_emitter.py — template để thêm vào repo</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">mavlink_emitter.py  ← file mới thêm</span></div>
+          <div class="code-body"><span class="k">import</span> time, socket, threading
+<span class="k">from</span> pymavlink <span class="k">import</span> mavutil
+
+<span class="k">class</span> <span class="fn">MAVLinkEmitter</span>:
+    <span class="s">"""
+    Đọc dữ liệu từ hardware tùy chỉnh và phát MAVLink 
+    lên UDP local để forwarder.py nhận và gửi lên server.
+    """</span>
+    <span class="k">def</span> <span class="fn">__init__</span>(self, output_port=<span class="n">14540</span>, system_id=<span class="n">1</span>):
+        self.mav = mavutil.mavlink_connection(
+            <span class="s">f'udpout:127.0.0.1:{output_port}'</span>
+        )
+        self.running = <span class="v">False</span>
+
+    <span class="k">def</span> <span class="fn">_read_hardware</span>(self):
+        <span class="c"># TODO: Thay bằng logic đọc sensor thực của bạn</span>
+        <span class="c"># Ví dụ: đọc IMU qua I2C, đọc GPS qua UART...</span>
+        <span class="k">return</span> {
+            <span class="s">'roll'</span>: <span class="n">0.0</span>, <span class="s">'pitch'</span>: <span class="n">0.0</span>, <span class="s">'yaw'</span>: <span class="n">0.0</span>,
+            <span class="s">'lat'</span>: <span class="n">10.762622</span>, <span class="s">'lon'</span>: <span class="n">106.660172</span>, <span class="s">'alt'</span>: <span class="n">10.0</span>,
+            <span class="s">'battery_v'</span>: <span class="n">11.8</span>, <span class="s">'battery_pct'</span>: <span class="n">85</span>
+        }
+
+    <span class="k">def</span> <span class="fn">emit_loop</span>(self):
+        <span class="k">while</span> self.running:
+            d = self._read_hardware()
+            t = int(time.time() * <span class="n">1e6</span>)  <span class="c"># microseconds</span>
+
+            <span class="c"># HEARTBEAT — bắt buộc, server dùng để biết drone online</span>
+            self.mav.mav.heartbeat_send(
+                mavutil.mavlink.MAV_TYPE_GROUND_ROVER,
+                mavutil.mavlink.MAV_AUTOPILOT_GENERIC,
+                <span class="n">0</span>, <span class="n">0</span>, mavutil.mavlink.MAV_STATE_ACTIVE
+            )
+
+            <span class="c"># ATTITUDE — roll/pitch/yaw cho PFD display</span>
+            self.mav.mav.attitude_send(
+                t, d[<span class="s">'roll'</span>], d[<span class="s">'pitch'</span>], d[<span class="s">'yaw'</span>], <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>
+            )
+
+            <span class="c"># GPS_RAW_INT — vị trí trên bản đồ</span>
+            self.mav.mav.gps_raw_int_send(
+                t, <span class="n">3</span>,
+                int(d[<span class="s">'lat'</span>] * <span class="n">1e7</span>), int(d[<span class="s">'lon'</span>] * <span class="n">1e7</span>),
+                int(d[<span class="s">'alt'</span>] * <span class="n">1000</span>),
+                <span class="n">65535</span>, <span class="n">65535</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">255</span>
+            )
+
+            <span class="c"># BATTERY_STATUS</span>
+            self.mav.mav.battery_status_send(
+                <span class="n">0</span>, <span class="n">0</span>, mavutil.mavlink.MAV_BATTERY_FUNCTION_ALL,
+                mavutil.mavlink.MAV_BATTERY_TYPE_LIPO,
+                <span class="n">2100</span>, [int(d[<span class="s">'battery_v'</span>] * <span class="n">1000</span>)] + [<span class="n">65535</span>] * <span class="n">9</span>,
+                d[<span class="s">'battery_pct'</span>], -<span class="n">1</span>, -<span class="n">1</span>, -<span class="n">1</span>,
+                mavutil.mavlink.MAV_BATTERY_CHARGE_STATE_OK, [], <span class="n">0</span>, -<span class="n">1</span>
+            )
+
+            time.sleep(<span class="n">0.1</span>)  <span class="c"># 10Hz</span>
+
+    <span class="k">def</span> <span class="fn">start</span>(self):
+        self.running = <span class="v">True</span>
+        threading.Thread(target=self.emit_loop, daemon=<span class="v">True</span>).start()</div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Tích hợp vào main.py</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">main.py — thêm 3 dòng</span></div>
+          <div class="code-body"><span class="k">from</span> mavlink_emitter <span class="k">import</span> MAVLinkEmitter  <span class="c"># THÊM</span>
+
+<span class="k">def</span> <span class="fn">main</span>():
+    <span class="c"># ... code cũ ...</span>
+    cfg = Config(<span class="s">"config.yaml"</span>)
+    auth = AuthClient(...)
+    fwd = Forwarder(cfg, auth)
+
+    emitter = MAVLinkEmitter(output_port=<span class="n">14540</span>)  <span class="c"># THÊM</span>
+    emitter.start()                                <span class="c"># THÊM</span>
+
+    <span class="c"># Và đổi config.yaml: connection_type: "udp_listen"</span>
+    <span class="c"># tcp_port: 14540</span></div>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-icon">ℹ</div>
+        <div><strong>MAVLink messages tối thiểu cần gửi:</strong> <code class="inline">HEARTBEAT</code> (bắt buộc, 1Hz), <code class="inline">ATTITUDE</code> (PFD), <code class="inline">GPS_RAW_INT</code> (bản đồ), <code class="inline">BATTERY_STATUS</code> (UI). Server sẽ hoạt động đúng với chỉ 4 message types này.</div>
+      </div>
+    </section>
+
+    <!-- ─── ROUTE 3 ─── -->
+    <section class="section" id="route-3">
+      <div class="section-title">Route 3 — ROS2 / MAVROS Bridge <a href="#route-3" class="anchor-link">#</a></div>
+      <p class="section-desc">Cho robot dùng ROS2 Humble/Iron. MAVROS chuyển đổi ROS topics → MAVLink messages.</p>
+
+      <ol class="step-list">
+        <li>
+          <div class="step-num coral">1</div>
+          <div class="step-content">
+            <strong>Cài MAVROS trên ROS2</strong>
+            <span><code class="inline">sudo apt install ros-humble-mavros ros-humble-mavros-extras</code></span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num coral">2</div>
+          <div class="step-content">
+            <strong>Launch MAVROS với UDP output</strong>
+            <span><code class="inline">ros2 launch mavros apm.launch fcu_url:="udp://:14541@127.0.0.1:14540"</code> — MAVROS nhận từ FCU và output MAVLink UDP ra port 14540</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num coral">3</div>
+          <div class="step-content">
+            <strong>UAVLink-Edge nhận từ MAVROS</strong>
+            <span>Đặt <code class="inline">connection_type: "udp_listen"</code>, <code class="inline">tcp_port: 14540</code> trong config.yaml — forwarder.py sẽ đọc MAVLink từ MAVROS output.</span>
+          </div>
+        </li>
+        <li>
+          <div class="step-num coral">4</div>
+          <div class="step-content">
+            <strong>Command ngược (Server → Robot)</strong>
+            <span>Thêm <code class="inline">ros2_command_bridge.py</code> subscribe từ MAVLink commands của forwarder và publish lên ROS2 topics tương ứng.</span>
+          </div>
+        </li>
+      </ol>
+
+      <div class="subsection">
+        <div class="subsection-title">ros2_command_bridge.py — template</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">ros2_command_bridge.py  ← file mới thêm</span></div>
+          <div class="code-body"><span class="k">import</span> rclpy
+<span class="k">from</span> rclpy.node <span class="k">import</span> Node
+<span class="k">from</span> geometry_msgs.msg <span class="k">import</span> Twist
+<span class="k">from</span> pymavlink <span class="k">import</span> mavutil
+
+<span class="k">class</span> <span class="fn">CommandBridge</span>(Node):
+    <span class="k">def</span> <span class="fn">__init__</span>(self, mavlink_conn):
+        super().__init__(<span class="s">'uavlink_command_bridge'</span>)
+        self.mav = mavlink_conn
+        self.cmd_pub = self.create_publisher(Twist, <span class="s">'/cmd_vel'</span>, <span class="n">10</span>)
+        self.create_timer(<span class="n">0.1</span>, self.poll_mavlink)
+
+    <span class="k">def</span> <span class="fn">poll_mavlink</span>(self):
+        msg = self.mav.recv_match(
+            type=[<span class="s">'COMMAND_LONG'</span>, <span class="s">'SET_POSITION_TARGET_LOCAL_NED'</span>],
+            blocking=<span class="v">False</span>
+        )
+        <span class="k">if</span> msg <span class="k">is None</span>: <span class="k">return</span>
+
+        <span class="k">if</span> msg.get_type() == <span class="s">'SET_POSITION_TARGET_LOCAL_NED'</span>:
+            twist = Twist()
+            twist.linear.x = msg.vx
+            twist.linear.y = msg.vy
+            twist.angular.z = msg.yaw_rate
+            self.cmd_pub.publish(twist)
+            self.get_logger().info(<span class="s">f'Command: vx={msg.vx:.2f}'</span>)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ROUTE 4 ─── -->
+    <section class="section" id="route-4">
+      <div class="section-title">Route 4 — Full Protocol Bridge (nâng cao) <a href="#route-4" class="anchor-link">#</a></div>
+      <p class="section-desc">Thiết bị giao tiếp bằng giao thức riêng, không muốn dùng MAVLink. Wrap payload vào MAVLink TUNNEL message.</p>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠</div>
+        <div><strong>Cảnh báo:</strong> Hướng này yêu cầu hiểu biết về MAVLink spec và cần server-side support (fork Hybrid Router Go). Phù hợp cho team có dev Go.</div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Chiến lược: MAVLink TUNNEL (Message ID 385)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">custom_protocol_bridge.py</span></div>
+          <div class="code-body"><span class="k">from</span> pymavlink <span class="k">import</span> mavutil
+<span class="k">import</span> json, struct
+
+<span class="k">class</span> <span class="fn">ProtocolBridge</span>:
+    <span class="s">"""Wrap giao thức tùy chỉnh vào MAVLink TUNNEL message."""</span>
+
+    PAYLOAD_TYPE_CUSTOM = <span class="n">0xF0</span>  <span class="c"># Tự định nghĩa</span>
+
+    <span class="k">def</span> <span class="fn">send_custom_data</span>(self, mav_conn, data: dict):
+        <span class="c"># Serialize data thành JSON bytes</span>
+        payload = json.dumps(data).encode(<span class="s">'utf-8'</span>)
+
+        <span class="c"># Pad đến 128 bytes (max TUNNEL payload)</span>
+        payload = payload.ljust(<span class="n">128</span>, <span class="k">b</span><span class="s">'\x00'</span>)[:128]
+
+        mav_conn.mav.tunnel_send(
+            <span class="n">0</span>,                        <span class="c"># target_system</span>
+            <span class="n">0</span>,                        <span class="c"># target_component</span>
+            self.PAYLOAD_TYPE_CUSTOM,  <span class="c"># payload_type (custom)</span>
+            len(payload),              <span class="c"># payload_length</span>
+            list(payload)              <span class="c"># payload bytes</span>
+        )
+
+    <span class="k">def</span> <span class="fn">receive_custom_data</span>(self, mav_conn):
+        msg = mav_conn.recv_match(type=<span class="s">'TUNNEL'</span>, blocking=<span class="v">False</span>)
+        <span class="k">if</span> msg <span class="k">and</span> msg.payload_type == self.PAYLOAD_TYPE_CUSTOM:
+            raw = bytes(msg.payload[:msg.payload_length])
+            <span class="k">return</span> json.loads(raw.rstrip(<span class="k">b</span><span class="s">'\x00'</span>))
+        <span class="k">return None</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ROUTE 5 ─── -->
+    <section class="section" id="route-5">
+      <div class="section-title">
+        <span data-lang="vi">Route 5 — RC Receiver + Video Camera</span>
+        <span data-lang="en">Route 5 — RC Receiver + Video Camera</span>
+        <a href="#route-5" class="anchor-link">#</a>
+      </div>
+      <p class="section-desc">
+        <span data-lang="vi">Tích hợp bộ thu RC (SBUS/PPM) và camera video lên qcloudstation. Có 2 sub-route tuỳ theo bạn có dùng FC hay không.</span>
+        <span data-lang="en">Integrate an RC receiver (SBUS/PPM) and video camera with qcloudstation. Two sub-routes depending on whether you use a flight controller or not.</span>
+      </p>
+
+      <!-- Feasibility callout -->
+      <div class="callout info">
+        <div class="callout-icon">✓</div>
+        <div>
+          <span data-lang="vi"><strong>Kết luận khả thi:</strong> Cả 2 sub-route đều thực hiện được trên Pi 5. Video stream qua MediaMTX đã được hỗ trợ sẵn bởi qcloudstation backend. RC channel data encode vào MAVLink <code class="inline">RC_CHANNELS_RAW</code> — server đã parse type này.</span>
+          <span data-lang="en"><strong>Feasibility verdict:</strong> Both sub-routes work on Pi 5. Video streaming via MediaMTX is already supported by the qcloudstation backend. RC channel data encodes into MAVLink <code class="inline">RC_CHANNELS_RAW</code> — the server already parses this type.</span>
+        </div>
+      </div>
+
+      <!-- Architecture overview -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">Tổng quan 2 sub-route</span>
+          <span data-lang="en">Two sub-route overview</span>
+        </div>
+        <div class="arch-diagram"><span class="arch-h">Sub-route 5A — Có FC (Pixhawk/ArduPilot)         Sub-route 5B — Không có FC</span>
+<span class="arch-note">─────────────────────────────────             ──────────────────────────────────</span>
+
+<span class="arch-box">  [RC TX]</span> ─RF─► <span class="arch-box">[RC Receiver]</span>            <span class="arch-box">  [RC TX]</span> ─RF─► <span class="arch-box">[RC Receiver]</span>
+                      │ SBUS                                       │ SBUS/PPM
+                      ▼                                            ▼
+              <span class="arch-box">[Pixhawk FC]</span>                           <span class="arch-box">[Raspberry Pi 5]</span>
+               │ MAVLink TELEM2                        rc_reader.py (pigpio/spidev)
+               ▼                                            │ RC_CHANNELS_RAW
+          <span class="arch-box">[Pi 5]</span>  ◄── RC_CHANNELS injected              ▼
+          forwarder.py                            mavlink_emitter.py
+               │                                      + RC data
+               │UDP :14550                             │UDP :14550
+               ▼                                       ▼
+        <span class="arch-box">[qcloudstation]</span>                        <span class="arch-box">[qcloudstation]</span>
+
+<span class="arch-box">  [Camera]</span> ──USB/CSI──► <span class="arch-box">[Pi 5]</span>           <span class="arch-box">  [Camera]</span> ──USB/CSI──► <span class="arch-box">[Pi 5]</span>
+                         video_streamer.py                        video_streamer.py
+                         RTSP → MediaMTX                          RTSP → MediaMTX
+                         <span class="arch-note">:8554</span>                                    <span class="arch-note">:8554</span>
+                               ▼                                        ▼
+                        <span class="arch-box">[MediaMTX]</span>                         <span class="arch-box">[MediaMTX]</span>
+                         WebRTC WHEP :8889                        WebRTC WHEP :8889</div>
+      </div>
+
+      <!-- Comparison table -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">So sánh 5A vs 5B</span>
+          <span data-lang="en">Comparing 5A vs 5B</span>
+        </div>
+        <table class="wiki-table">
+          <thead><tr>
+            <th></th>
+            <th>5A — Có FC</th>
+            <th>5B — Không FC</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><span data-lang="vi">Phần cứng RC</span><span data-lang="en">RC hardware</span></td>
+              <td><span data-lang="vi">Receiver nối vào FC (SBUS port), FC nối UART vào Pi</span><span data-lang="en">Receiver → FC SBUS port, FC UART → Pi</span></td>
+              <td><span data-lang="vi">Receiver nối thẳng vào UART Pi (<code class="inline">/dev/ttyAMA0</code>)</span><span data-lang="en">Receiver SBUS → Pi UART (<code class="inline">/dev/ttyAMA0</code>) directly</span></td>
+            </tr>
+            <tr>
+              <td><span data-lang="vi">Code thay đổi</span><span data-lang="en">Code changes</span></td>
+              <td><span data-lang="vi">Không cần — FC tự encode RC vào MAVLink</span><span data-lang="en">None — FC encodes RC into MAVLink natively</span></td>
+              <td><span data-lang="vi">Thêm <code class="inline">rc_reader.py</code>, sửa <code class="inline">mavlink_emitter.py</code></span><span data-lang="en">Add <code class="inline">rc_reader.py</code>, modify <code class="inline">mavlink_emitter.py</code></span></td>
+            </tr>
+            <tr>
+              <td><span data-lang="vi">Độ trễ RC telemetry</span><span data-lang="en">RC telemetry latency</span></td>
+              <td><span data-lang="vi">~20–50ms (qua FC)</span><span data-lang="en">~20–50ms (via FC)</span></td>
+              <td><span data-lang="vi">~5–15ms (trực tiếp)</span><span data-lang="en">~5–15ms (direct)</span></td>
+            </tr>
+            <tr>
+              <td><span data-lang="vi">Điều khiển motor/servo</span><span data-lang="en">Motor/servo control</span></td>
+              <td><span data-lang="vi">FC xử lý — PID, mixing, failsafe đầy đủ</span><span data-lang="en">FC handles it — full PID, mixing, failsafe</span></td>
+              <td><span data-lang="vi">Pi tự làm — cần viết mixer, KHÔNG khuyến nghị cho drone bay</span><span data-lang="en">Pi must do it — write mixer yourself, NOT recommended for flying drones</span></td>
+            </tr>
+            <tr>
+              <td><span data-lang="vi">Phù hợp với</span><span data-lang="en">Best for</span></td>
+              <td><span data-lang="vi">Drone/rover có Pixhawk, muốn thêm RC monitor lên cloud</span><span data-lang="en">Drones/rovers with Pixhawk, add RC monitoring to cloud</span></td>
+              <td><span data-lang="vi">Robot mặt đất, camera car, thiết bị không bay</span><span data-lang="en">Ground robots, camera cars, non-flying devices</span></td>
+            </tr>
+            <tr>
+              <td><span data-lang="vi">Độ khó</span><span data-lang="en">Difficulty</span></td>
+              <td>★★☆</td>
+              <td>★★★</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 5A detail -->
+      <div class="subsection">
+        <div class="subsection-title">Sub-route 5A — <span data-lang="vi">RC qua FC (dễ hơn)</span><span data-lang="en">RC via FC (easier)</span></div>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+          <span data-lang="vi">FC (Pixhawk/ArduPilot) đọc SBUS từ receiver và tự nhúng vào stream MAVLink. Pi chỉ cần forward — không cần code thêm. Đây là Route 1 với camera thêm vào.</span>
+          <span data-lang="en">The FC reads SBUS from the receiver and injects it into the MAVLink stream. Pi just forwards — no extra code. This is Route 1 with a camera added.</span>
+        </p>
+        <div class="callout warn">
+          <div class="callout-icon">⚠</div>
+          <div>
+            <span data-lang="vi"><strong>Lưu ý ArduPilot:</strong> Mặc định <code class="inline">SR2_RC_CHAN = 0</code> — phải set lên ít nhất 5Hz để RC_CHANNELS_RAW xuất hiện trong MAVLink stream: <code class="inline">param set SR2_RC_CHAN 5</code> qua QGC hoặc MAVProxy.</span>
+            <span data-lang="en"><strong>ArduPilot note:</strong> Default <code class="inline">SR2_RC_CHAN = 0</code> — must set to at least 5Hz for RC_CHANNELS_RAW to appear in the MAVLink stream: <code class="inline">param set SR2_RC_CHAN 5</code> via QGC or MAVProxy.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5B detail - rc_reader.py -->
+      <div class="subsection">
+        <div class="subsection-title">Sub-route 5B — <span data-lang="vi">rc_reader.py: đọc SBUS trực tiếp</span><span data-lang="en">rc_reader.py: read SBUS directly</span></div>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+          <span data-lang="vi">SBUS là giao thức serial 100kbps inverted. Pi 5 cần đảo tín hiệu (inverter circuit) hoặc dùng receiver hỗ trợ SBUS non-inverted (ExpressLRS, ELRS receiver với pin TX2).</span>
+          <span data-lang="en">SBUS is a 100kbps inverted serial protocol. Pi 5 needs signal inversion (inverter circuit) or a receiver with non-inverted SBUS output (ExpressLRS, ELRS receivers with TX2 pin).</span>
+        </p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">rc_reader.py  ← file mới thêm vào repo</span></div>
+          <div class="code-body"><span class="k">import</span> serial, threading, time, logging
+
+logger = logging.getLogger(<span class="s">"RCReader"</span>)
+
+<span class="k">class</span> <span class="fn">SBUSReader</span>:
+    <span class="s">"""
+    Đọc SBUS từ RC receiver nối vào UART Pi 5.
+    SBUS spec: 100000 baud, 8E2, inverted signal.
+    
+    Wiring:
+      Receiver SBUS out ──[100Ω]──[NPN transistor inverter]──► /dev/ttyAMA2
+      (hoặc dùng ELRS receiver với non-inverted SBUS / CRSF output)
+    
+    Non-inverted alternatives (không cần inverter):
+      - ExpressLRS receiver với CRSF → dùng CRSFReader thay thế
+      - FrSky R-XSR với pad "SPORT" đã invert sẵn
+    """</span>
+    SBUS_FRAME_LEN = <span class="n">25</span>
+    SBUS_HEADER    = <span class="n">0x0F</span>
+    SBUS_FOOTER    = <span class="n">0x00</span>
+
+    <span class="k">def</span> <span class="fn">__init__</span>(self, port=<span class="s">"/dev/ttyAMA2"</span>, callback=<span class="v">None</span>):
+        self.port     = port
+        self.callback = callback  <span class="c"># fn(channels: list[int]) — 16 channels, 172–1811</span>
+        self.channels = [<span class="n">992</span>] * <span class="n">16</span>  <span class="c"># midpoint default</span>
+        self.failsafe = <span class="v">False</span>
+        self.running  = <span class="v">False</span>
+        self._ser     = <span class="v">None</span>
+        self._buf     = <span class="k">bytearray</span>()
+
+    <span class="k">def</span> <span class="fn">start</span>(self):
+        <span class="k">try</span>:
+            self._ser = serial.Serial(
+                self.port, baudrate=<span class="n">100000</span>,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_EVEN,
+                stopbits=serial.STOPBITS_TWO,
+                timeout=<span class="n">0.1</span>
+            )
+            self.running = <span class="v">True</span>
+            threading.Thread(target=self._read_loop, daemon=<span class="v">True</span>).start()
+            logger.info(<span class="s">f"SBUS reader started on {self.port}"</span>)
+        <span class="k">except</span> Exception <span class="k">as</span> e:
+            logger.error(<span class="s">f"SBUS open failed: {e}"</span>)
+
+    <span class="k">def</span> <span class="fn">_read_loop</span>(self):
+        <span class="k">while</span> self.running:
+            <span class="k">try</span>:
+                data = self._ser.read(<span class="n">64</span>)
+                <span class="k">if not</span> data: <span class="k">continue</span>
+                self._buf.extend(data)
+                self._parse_frames()
+            <span class="k">except</span> Exception <span class="k">as</span> e:
+                logger.warning(<span class="s">f"SBUS read error: {e}"</span>)
+                time.sleep(<span class="n">0.01</span>)
+
+    <span class="k">def</span> <span class="fn">_parse_frames</span>(self):
+        <span class="k">while</span> len(self._buf) >= self.SBUS_FRAME_LEN:
+            <span class="c"># Tìm header byte 0x0F</span>
+            idx = self._buf.find(self.SBUS_HEADER)
+            <span class="k">if</span> idx == -<span class="n">1</span>:
+                self._buf.clear(); <span class="k">return</span>
+            <span class="k">if</span> idx > <span class="n">0</span>:
+                <span class="k">del</span> self._buf[:idx]  <span class="c"># strip garbage</span>
+            <span class="k">if</span> len(self._buf) < self.SBUS_FRAME_LEN:
+                <span class="k">return</span>
+
+            frame = self._buf[:self.SBUS_FRAME_LEN]
+            <span class="k">del</span> self._buf[:self.SBUS_FRAME_LEN]
+
+            <span class="c"># Decode 16 channels từ 11-bit packed values</span>
+            b = frame[<span class="n">1</span>:<span class="n">23</span>]
+            ch = [<span class="n">0</span>] * <span class="n">16</span>
+            bit_buf = int.from_bytes(b, <span class="s">'little'</span>)
+            <span class="k">for</span> i <span class="k">in</span> range(<span class="n">16</span>):
+                ch[i] = (bit_buf >> (i * <span class="n">11</span>)) & <span class="n">0x7FF</span>
+
+            self.failsafe = bool(frame[<span class="n">23</span>] & <span class="n">0x08</span>)
+            self.channels = ch
+
+            <span class="k">if</span> self.callback:
+                self.callback(ch)
+
+    <span class="k">def</span> <span class="fn">get_channels</span>(self) -> list:
+        <span class="k">return</span> self.channels.copy()
+
+    <span class="k">def</span> <span class="fn">sbus_to_pwm</span>(self, sbus_val: int) -> int:
+        <span class="c"># SBUS 172–1811 → PWM 1000–2000 µs</span>
+        <span class="k">return</span> int(<span class="n">1000</span> + (sbus_val - <span class="n">172</span>) * <span class="n">1000</span> / (<span class="n">1811</span> - <span class="n">172</span>))</div>
+        </div>
+
+        <div class="code-block" style="margin-top:12px">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">rc_reader.py — CRSFReader cho ExpressLRS (không cần inverter)</span></div>
+          <div class="code-body"><span class="k">class</span> <span class="fn">CRSFReader</span>:
+    <span class="s">"""
+    Đọc CRSF protocol từ ExpressLRS / TBS Crossfire receiver.
+    Không cần inverter. Baud: 420000. UART TX của receiver → Pi RX.
+    
+    Ưu điểm CRSF vs SBUS:
+      - Không cần inverter circuit
+      - Tốc độ cao hơn (416 fps vs 112 fps)
+      - Có link statistics (RSSI, SNR, LQ) — gửi lên cloud được
+    """</span>
+    CRSF_SYNC     = <span class="n">0xC8</span>
+    CRSF_CHANNELS = <span class="n">0x16</span>
+    CRSF_LINK_RX  = <span class="n">0x14</span>
+
+    <span class="k">def</span> <span class="fn">__init__</span>(self, port=<span class="s">"/dev/ttyAMA2"</span>, callback=<span class="v">None</span>, link_callback=<span class="v">None</span>):
+        self.port          = port
+        self.callback      = callback       <span class="c"># fn(channels: list[int]) — 16 ch, 172–1811</span>
+        self.link_callback = link_callback  <span class="c"># fn(rssi, snr, lq) — link quality</span>
+        self.running       = <span class="v">False</span>
+        self._ser          = <span class="v">None</span>
+
+    <span class="k">def</span> <span class="fn">start</span>(self):
+        self._ser = serial.Serial(self.port, baudrate=<span class="n">420000</span>, timeout=<span class="n">0.1</span>)
+        self.running = <span class="v">True</span>
+        threading.Thread(target=self._read_loop, daemon=<span class="v">True</span>).start()
+        logger.info(<span class="s">f"CRSF reader started on {self.port}"</span>)
+
+    <span class="k">def</span> <span class="fn">_read_loop</span>(self):
+        <span class="k">while</span> self.running:
+            byte = self._ser.read(<span class="n">1</span>)
+            <span class="k">if not</span> byte <span class="k">or</span> byte[<span class="n">0</span>] != self.CRSF_SYNC: <span class="k">continue</span>
+            length = self._ser.read(<span class="n">1</span>)
+            <span class="k">if not</span> length: <span class="k">continue</span>
+            frame = self._ser.read(length[<span class="n">0</span>])
+            <span class="k">if</span> len(frame) < length[<span class="n">0</span>]: <span class="k">continue</span>
+
+            frame_type = frame[<span class="n">0</span>]
+            payload    = frame[<span class="n">1</span>:-<span class="n">1</span>]  <span class="c"># strip CRC</span>
+
+            <span class="k">if</span> frame_type == self.CRSF_CHANNELS <span class="k">and</span> len(payload) == <span class="n">22</span>:
+                ch = [<span class="n">0</span>] * <span class="n">16</span>
+                bit_buf = int.from_bytes(payload, <span class="s">'little'</span>)
+                <span class="k">for</span> i <span class="k">in</span> range(<span class="n">16</span>):
+                    ch[i] = (bit_buf >> (i * <span class="n">11</span>)) & <span class="n">0x7FF</span>
+                <span class="k">if</span> self.callback: self.callback(ch)
+
+            <span class="k">elif</span> frame_type == self.CRSF_LINK_RX <span class="k">and</span> len(payload) >= <span class="n">8</span>:
+                rssi = -payload[<span class="n">0</span>]
+                snr  = payload[<span class="n">2</span>] - <span class="n">128</span>  <span class="c"># signed</span>
+                lq   = payload[<span class="n">3</span>]          <span class="c"># link quality %</span>
+                <span class="k">if</span> self.link_callback: self.link_callback(rssi, snr, lq)</div>
+        </div>
+      </div>
+
+      <!-- RC → MAVLink injection -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">Nhúng RC channels vào MAVLink stream</span>
+          <span data-lang="en">Inject RC channels into MAVLink stream</span>
+        </div>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+          <span data-lang="vi">Sửa <code class="inline">mavlink_emitter.py</code> để gửi thêm <code class="inline">RC_CHANNELS_RAW</code> — server đã biết parse message này.</span>
+          <span data-lang="en">Modify <code class="inline">mavlink_emitter.py</code> to also send <code class="inline">RC_CHANNELS_RAW</code> — the server already knows how to parse this.</span>
+        </p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">mavlink_emitter.py — thêm RC channel support</span></div>
+          <div class="code-body"><span class="k">from</span> rc_reader <span class="k">import</span> SBUSReader, CRSFReader
+
+<span class="k">class</span> <span class="fn">MAVLinkEmitter</span>:
+    <span class="k">def</span> <span class="fn">__init__</span>(self, output_port=<span class="n">14540</span>):
+        <span class="c"># ... init cũ ...</span>
+        self.rc_channels = [<span class="n">992</span>] * <span class="n">16</span>  <span class="c"># midpoint</span>
+        self.rc_rssi     = <span class="n">255</span>          <span class="c"># unknown</span>
+
+        <span class="c"># Chọn 1 trong 2 reader:</span>
+        self.rc_reader = CRSFReader(
+            port=<span class="s">"/dev/ttyAMA2"</span>,
+            callback=self._on_rc_channels,
+            link_callback=self._on_link_stats
+        )
+        <span class="c"># hoặc: self.rc_reader = SBUSReader("/dev/ttyAMA2", self._on_rc_channels)</span>
+
+    <span class="k">def</span> <span class="fn">_on_rc_channels</span>(self, channels):
+        self.rc_channels = channels
+
+    <span class="k">def</span> <span class="fn">_on_link_stats</span>(self, rssi, snr, lq):
+        <span class="c"># RSSI dùng cho RADIO_STATUS message</span>
+        self.rc_rssi = max(<span class="n">0</span>, min(<span class="n">254</span>, lq * <span class="n">254</span> // <span class="n">100</span>))
+
+    <span class="k">def</span> <span class="fn">emit_loop</span>(self):
+        tick = <span class="n">0</span>
+        <span class="k">while</span> self.running:
+            t = int(time.time() * <span class="n">1e6</span>)
+
+            <span class="c"># 10Hz — Attitude, GPS (như cũ)</span>
+            self.mav.mav.heartbeat_send(...)
+            self.mav.mav.attitude_send(...)
+
+            <span class="c"># 5Hz — RC channels (giảm tần số để không flood)</span>
+            <span class="k">if</span> tick % <span class="n">2</span> == <span class="n">0</span>:
+                ch = self.rc_channels
+                self.mav.mav.rc_channels_raw_send(
+                    t,            <span class="c"># time_boot_ms</span>
+                    <span class="n">1</span>,            <span class="c"># port</span>
+                    ch[<span class="n">0</span>], ch[<span class="n">1</span>], ch[<span class="n">2</span>], ch[<span class="n">3</span>],   <span class="c"># ch1-4: Roll/Pitch/Throttle/Yaw</span>
+                    ch[<span class="n">4</span>], ch[<span class="n">5</span>], ch[<span class="n">6</span>], ch[<span class="n">7</span>],   <span class="c"># ch5-8: modes/aux</span>
+                    self.rc_rssi  <span class="c"># rssi: 0-254, 255=unknown</span>
+                )
+                <span class="c"># Link quality qua RADIO_STATUS</span>
+                self.mav.mav.radio_status_send(
+                    self.rc_rssi, self.rc_rssi,
+                    <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>, <span class="n">0</span>
+                )
+
+            tick += <span class="n">1</span>
+            time.sleep(<span class="n">0.1</span>)</div>
+        </div>
+      </div>
+
+      <!-- Video streaming -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">video_streamer.py — Camera → RTSP → MediaMTX</span>
+          <span data-lang="en">video_streamer.py — Camera → RTSP → MediaMTX</span>
+        </div>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+          <span data-lang="vi">Pi Camera Module 3 hoặc USB camera → encode H.264 bằng <code class="inline">libcamera-vid</code> hoặc <code class="inline">ffmpeg</code> → push RTSP lên MediaMTX server của qcloudstation.</span>
+          <span data-lang="en">Pi Camera Module 3 or USB camera → H.264 encode via <code class="inline">libcamera-vid</code> or <code class="inline">ffmpeg</code> → push RTSP to qcloudstation's MediaMTX server.</span>
+        </p>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">video_streamer.py  ← file mới thêm vào repo</span></div>
+          <div class="code-body"><span class="k">import</span> subprocess, threading, logging, time, os
+
+logger = logging.getLogger(<span class="s">"VideoStreamer"</span>)
+
+<span class="k">class</span> <span class="fn">VideoStreamer</span>:
+    <span class="s">"""
+    Stream video từ Pi Camera hoặc USB camera lên MediaMTX server.
+    MediaMTX nhận RTSP và re-publish sang WebRTC WHEP cho frontend.
+    
+    Cameras supported:
+      Pi Camera Module 3: libcamera-vid (tốt nhất, hardware H.264)
+      USB webcam:         ffmpeg v4l2 (fallback, CPU encode)
+    """</span>
+
+    <span class="k">def</span> <span class="fn">__init__</span>(self, config):
+        self.cfg    = config.get(<span class="s">'video'</span>, {})
+        self.proc   = <span class="v">None</span>
+        self.running = <span class="v">False</span>
+
+        <span class="c"># Lấy từ config.yaml — xem section video bên dưới</span>
+        self.source    = self.cfg.get(<span class="s">'source'</span>, <span class="s">'picamera'</span>)
+        self.rtsp_url  = self.cfg.get(<span class="s">'mediamtx_rtsp'</span>, <span class="s">'rtsp://45.117.171.237:8554'</span>)
+        self.drone_id  = self.cfg.get(<span class="s">'stream_name'</span>, <span class="s">'drone1'</span>)
+        self.width     = self.cfg.get(<span class="s">'width'</span>, <span class="n">1280</span>)
+        self.height    = self.cfg.get(<span class="s">'height'</span>, <span class="n">720</span>)
+        self.fps       = self.cfg.get(<span class="s">'fps'</span>, <span class="n">30</span>)
+        self.bitrate   = self.cfg.get(<span class="s">'bitrate_kbps'</span>, <span class="n">2000</span>)
+
+    <span class="k">def</span> <span class="fn">_build_cmd</span>(self):
+        target = <span class="s">f"{self.rtsp_url}/{self.drone_id}"</span>
+        <span class="k">if</span> self.source == <span class="s">'picamera'</span>:
+            <span class="c"># Pi Camera Module 3: hardware H.264, thấp nhất latency</span>
+            <span class="k">return</span> [
+                <span class="s">'libcamera-vid'</span>,
+                <span class="s">'--width'</span>, str(self.width), <span class="s">'--height'</span>, str(self.height),
+                <span class="s">'--framerate'</span>, str(self.fps),
+                <span class="s">'--bitrate'</span>, str(self.bitrate * <span class="n">1000</span>),
+                <span class="s">'--codec'</span>, <span class="s">'h264'</span>, <span class="s">'--profile'</span>, <span class="s">'main'</span>,
+                <span class="s">'--level'</span>, <span class="s">'4.2'</span>, <span class="s">'--intra'</span>, <span class="s">'30'</span>,
+                <span class="s">'-t'</span>, <span class="s">'0'</span>,  <span class="c"># stream mãi mãi</span>
+                <span class="s">'-o'</span>, <span class="s">'-'</span>,  <span class="c"># stdout</span>
+                <span class="s">'|'</span>,
+                <span class="s">'ffmpeg'</span>, <span class="s">'-re'</span>, <span class="s">'-f'</span>, <span class="s">'h264'</span>, <span class="s">'-i'</span>, <span class="s">'pipe:0'</span>,
+                <span class="s">'-c:v'</span>, <span class="s">'copy'</span>, <span class="s">'-f'</span>, <span class="s">'rtsp'</span>,
+                <span class="s">'-rtsp_transport'</span>, <span class="s">'tcp'</span>, target
+            ]
+        <span class="k">else</span>:  <span class="c"># usb webcam</span>
+            <span class="k">return</span> [
+                <span class="s">'ffmpeg'</span>, <span class="s">'-f'</span>, <span class="s">'v4l2'</span>,
+                <span class="s">'-video_size'</span>, <span class="s">f'{self.width}x{self.height}'</span>,
+                <span class="s">'-framerate'</span>, str(self.fps),
+                <span class="s">'-i'</span>, self.cfg.get(<span class="s">'usb_device'</span>, <span class="s">'/dev/video0'</span>),
+                <span class="s">'-c:v'</span>, <span class="s">'h264_v4l2m2m'</span>,  <span class="c"># Pi hardware encode</span>
+                <span class="s">'-b:v'</span>, <span class="s">f'{self.bitrate}k'</span>,
+                <span class="s">'-f'</span>, <span class="s">'rtsp'</span>, <span class="s">'-rtsp_transport'</span>, <span class="s">'tcp'</span>, target
+            ]
+
+    <span class="k">def</span> <span class="fn">start</span>(self):
+        self.running = <span class="v">True</span>
+        threading.Thread(target=self._stream_loop, daemon=<span class="v">True</span>).start()
+
+    <span class="k">def</span> <span class="fn">_stream_loop</span>(self):
+        <span class="k">while</span> self.running:
+            cmd = self._build_cmd()
+            logger.info(<span class="s">f"Starting stream → {self.rtsp_url}/{self.drone_id}"</span>)
+            <span class="k">try</span>:
+                <span class="c"># Dùng shell=True để hỗ trợ pipe trong libcamera cmd</span>
+                self.proc = subprocess.Popen(
+                    <span class="s">' '</span>.join(cmd), shell=<span class="v">True</span>,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
+                self.proc.wait()
+            <span class="k">except</span> Exception <span class="k">as</span> e:
+                logger.error(<span class="s">f"Stream error: {e}"</span>)
+            <span class="k">finally</span>:
+                logger.warning(<span class="s">"Stream stopped, restarting in 5s..."</span>)
+                time.sleep(<span class="n">5</span>)  <span class="c"># auto-restart on crash</span>
+
+    <span class="k">def</span> <span class="fn">stop</span>(self):
+        self.running = <span class="v">False</span>
+        <span class="k">if</span> self.proc: self.proc.terminate()</div>
+        </div>
+      </div>
+
+      <!-- config.yaml additions -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">Thêm vào config.yaml</span>
+          <span data-lang="en">config.yaml additions</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">YAML</span><span class="code-file">config.yaml — thêm 2 section mới</span></div>
+          <div class="code-body"><span class="c"># ─── RC RECEIVER ──────────────────────────────────────</span>
+rc:
+    enabled: <span class="v">false</span>              <span class="c"># true để bật rc_reader</span>
+    protocol: <span class="s">"crsf"</span>           <span class="c"># "sbus" hoặc "crsf" (ExpressLRS)</span>
+    port: <span class="s">"/dev/ttyAMA2"</span>       <span class="c"># UART port nối receiver</span>
+    <span class="c"># channels: [1=Roll, 2=Pitch, 3=Throttle, 4=Yaw, 5=Mode, ...]</span>
+    send_hz: <span class="n">5</span>                 <span class="c"># tần số gửi RC_CHANNELS_RAW lên server</span>
+
+<span class="c"># ─── VIDEO STREAM ─────────────────────────────────────</span>
+video:
+    enabled: <span class="v">false</span>             <span class="c"># true để bật video_streamer</span>
+    source: <span class="s">"picamera"</span>        <span class="c"># "picamera" hoặc "usb"</span>
+    usb_device: <span class="s">"/dev/video0"</span> <span class="c"># chỉ dùng khi source: "usb"</span>
+    mediamtx_rtsp: <span class="s">"rtsp://45.117.171.237:8554"</span>
+    stream_name: <span class="s">"drone1"</span>    <span class="c"># tên stream trên MediaMTX — phải unique</span>
+    width: <span class="n">1280</span>
+    height: <span class="n">720</span>
+    fps: <span class="n">30</span>
+    bitrate_kbps: <span class="n">2000</span>        <span class="c"># 1500–4000 tuỳ băng thông WiFi</span></div>
+        </div>
+      </div>
+
+      <!-- main.py wiring -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">Wiring vào main.py</span>
+          <span data-lang="en">Wire into main.py</span>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">main.py — thêm RC + Video</span></div>
+          <div class="code-body"><span class="k">from</span> rc_reader <span class="k">import</span> SBUSReader, CRSFReader     <span class="c"># THÊM</span>
+<span class="k">from</span> video_streamer <span class="k">import</span> VideoStreamer         <span class="c"># THÊM</span>
+
+<span class="k">def</span> <span class="fn">main</span>():
+    cfg  = Config(<span class="s">"config.yaml"</span>)
+    auth = AuthClient(...)
+    fwd  = Forwarder(cfg, auth)
+
+    <span class="c"># ── Video stream (optional) ──────────────────────────</span>
+    <span class="k">if</span> cfg.data.get(<span class="s">'video'</span>, {}).get(<span class="s">'enabled'</span>):
+        streamer = VideoStreamer(cfg.data)
+        streamer.start()
+        logger.info(<span class="s">"📹 Video streamer started"</span>)
+
+    <span class="c"># ── RC reader (optional, Sub-route 5B only) ──────────</span>
+    rc_reader = <span class="v">None</span>
+    <span class="k">if</span> cfg.data.get(<span class="s">'rc'</span>, {}).get(<span class="s">'enabled'</span>):
+        proto = cfg.data[<span class="s">'rc'</span>].get(<span class="s">'protocol'</span>, <span class="s">'crsf'</span>)
+        port  = cfg.data[<span class="s">'rc'</span>].get(<span class="s">'port'</span>, <span class="s">'/dev/ttyAMA2'</span>)
+        <span class="k">if</span> proto == <span class="s">'crsf'</span>:
+            rc_reader = CRSFReader(port=port)
+        <span class="k">else</span>:
+            rc_reader = SBUSReader(port=port)
+        rc_reader.start()
+        logger.info(<span class="s">f"🎮 RC reader started ({proto} on {port})"</span>)
+
+    <span class="c"># ── Auth + Forwarder (như cũ) ────────────────────────</span>
+    start_server(cfg.web.get(<span class="s">'port'</span>, <span class="n">8080</span>), fwd.stats, auth)
+    auth.start()
+    fwd.start(rc_reader=rc_reader)  <span class="c"># pass rc_reader vào forwarder</span>
+
+    <span class="k">while</span> <span class="v">True</span>:
+        time.sleep(<span class="n">1</span>)</div>
+        </div>
+      </div>
+
+      <!-- Wiring diagram -->
+      <div class="subsection">
+        <div class="subsection-title">
+          <span data-lang="vi">Sơ đồ đấu nối vật lý (Sub-route 5B)</span>
+          <span data-lang="en">Physical wiring diagram (Sub-route 5B)</span>
+        </div>
+        <div class="arch-diagram"><span class="arch-h">  Raspberry Pi 5                     RC Receiver (ELRS / CRSF)</span>
+  <span class="arch-note">  ────────────────                    ─────────────────────────</span>
+  Pin 6  (GND)   ────────────────── GND
+  Pin 4  (5V)    ────────────────── 5V (hoặc dùng BEC riêng)
+  Pin 10 (RXD2)  ────────────────── TX  (CRSF out của receiver)
+  <span class="arch-note">                                    ← Không cần inverter với CRSF/ELRS!</span>
+
+  <span class="arch-note">  Enable UART2 trên Pi 5 (thêm vào /boot/firmware/config.txt):</span>
+  <span class="arch-line">  dtoverlay=uart2</span>
+  <span class="arch-line">  → /dev/ttyAMA2 sẵn sàng</span>
+
+<span class="arch-h">  Pi Camera Module 3                 Raspberry Pi 5</span>
+  <span class="arch-note">  ──────────────────                 ────────────────</span>
+  CSI Ribbon Cable ─────────────────── CAM0 / CAM1 port
+  <span class="arch-note">  (22-pin FPC, bản mới của Pi 5)</span>
+
+<span class="arch-h">  USB Webcam (thay thế)</span>
+  USB-A ──────────────────────────── USB 3.0 port Pi 5
+  <span class="arch-note">  Dùng webcam có hardware H.264 encode để giảm CPU load</span>
+  <span class="arch-note">  Ví dụ: Logitech C920, Logitech BRIO</span></div>
+      </div>
+
+      <!-- Feasibility limitations -->
+      <div class="callout danger">
+        <div class="callout-icon">✕</div>
+        <div>
+          <span data-lang="vi"><strong>Giới hạn quan trọng — Sub-route 5B:</strong> RC data lên qcloudstation chỉ dùng để <em>monitor</em> (xem stick position trên dashboard). Không thể dùng để điều khiển motor/servo từ Pi nếu không có FC — Pi không có real-time OS, jitter ~1ms sẽ làm servo rung. Chỉ dùng 5B cho robot mặt đất, camera car, hoặc thiết bị không yêu cầu control loop nhanh.</span>
+          <span data-lang="en"><strong>Important limitation — Sub-route 5B:</strong> RC data to qcloudstation is for <em>monitoring only</em> (view stick position on dashboard). Without a FC, you cannot drive motors/servos from Pi — Pi has no RTOS, ~1ms jitter will cause servo chatter. Use 5B only for ground robots, camera cars, or devices that don't need fast control loops.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ─── HARDWARE ─── -->
+    <section class="section" id="hardware">
+      <div class="section-title">Bảng phần cứng hỗ trợ <a href="#hardware" class="anchor-link">#</a></div>
+
+      <table class="wiki-table">
+        <thead><tr><th>Thiết bị</th><th>Route</th><th>Connection type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Pixhawk 6C / 6X</td><td><span class="tag tag-green" style="font-size:10px">Route 1</span></td><td>serial</td><td>TELEM2: /dev/ttyAMA0 @ 57600</td></tr>
+          <tr><td>Cube Orange / Black</td><td><span class="tag tag-green" style="font-size:10px">Route 1</span></td><td>serial</td><td>Tương tự Pixhawk, TELEM1/2</td></tr>
+          <tr><td>Holybro Kakute H7</td><td><span class="tag tag-green" style="font-size:10px">Route 1</span></td><td>serial/udp</td><td>Dùng ArduPilot, cần mavlink output</td></tr>
+          <tr><td>SITL (Simulation)</td><td><span class="tag tag-green" style="font-size:10px">Route 1</span></td><td>udp_listen</td><td>tcp_port: 14540, test không cần hardware</td></tr>
+          <tr><td>Arduino Mega + Telemetry</td><td><span class="tag tag-purple" style="font-size:10px">Route 2</span></td><td>udp_listen</td><td>Dùng mavlink_emitter.py, Arduino gửi raw sensor data</td></tr>
+          <tr><td>ESP32 (WiFi native)</td><td><span class="tag tag-purple" style="font-size:10px">Route 2</span></td><td>udp_listen</td><td>ESP32 gửi sensor qua WiFi UDP, Pi nhận và phát MAVLink</td></tr>
+          <tr><td>STM32 + ROS2</td><td><span class="tag tag-red" style="font-size:10px">Route 3</span></td><td>udp_listen</td><td>MAVROS bridge trên Pi/Jetson</td></tr>
+          <tr><td>Jetson Orin + ROS2</td><td><span class="tag tag-red" style="font-size:10px">Route 3</span></td><td>udp_listen</td><td>Navigation stack đầy đủ, forward telemetry lên cloud</td></tr>
+          <tr><td>Custom robot (bất kỳ)</td><td><span class="tag tag-amber" style="font-size:10px">Route 4</span></td><td>custom</td><td>TUNNEL message, cần fork server</td></tr>
+          <tr><td>ELRS Receiver (CRSF out)</td><td><span class="tag" style="font-size:10px;color:#ff6584;border-color:rgba(255,101,132,0.3);background:rgba(255,101,132,0.06)">Route 5</span></td><td>serial CRSF</td><td>/dev/ttyAMA2 @ 420000 baud, không cần inverter</td></tr>
+          <tr><td>FrSky / Futaba (SBUS out)</td><td><span class="tag" style="font-size:10px;color:#ff6584;border-color:rgba(255,101,132,0.3);background:rgba(255,101,132,0.06)">Route 5</span></td><td>serial SBUS</td><td>/dev/ttyAMA2 @ 100000 baud 8E2, cần inverter NPN</td></tr>
+          <tr><td>Pi Camera Module 3</td><td><span class="tag" style="font-size:10px;color:#ff6584;border-color:rgba(255,101,132,0.3);background:rgba(255,101,132,0.06)">Route 5</span></td><td>CSI (CAM0/1)</td><td>libcamera-vid → ffmpeg → RTSP → MediaMTX</td></tr>
+          <tr><td>USB Webcam (Logitech C920+)</td><td><span class="tag" style="font-size:10px;color:#ff6584;border-color:rgba(255,101,132,0.3);background:rgba(255,101,132,0.06)">Route 5</span></td><td>USB 3.0</td><td>ffmpeg v4l2 + h264_v4l2m2m (Pi HW encode)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ─── WIRING ─── -->
+    <section class="section" id="wiring">
+      <div class="section-title">Sơ đồ đấu nối UART (Pi ↔ Pixhawk) <a href="#wiring" class="anchor-link">#</a></div>
+      <div class="arch-diagram">  <span class="arch-h">Raspberry Pi 5                    Pixhawk TELEM2</span>
+  <span class="arch-note">────────────────                  ─────────────────</span>
+  Pin 6  (GND)  ─────────────────── GND  (Pin 6)
+  Pin 8  (TXD)  ─────────────────── RX   (Pin 3)
+  Pin 10 (RXD)  ─────────────────── TX   (Pin 2)
+  <span class="arch-note">                                  5V supply từ Pixhawk KHÔNG nối vào Pi 5!</span>
+
+  <span class="arch-h">config.yaml:</span>
+  connection_type: "serial"
+  serial_port: "/dev/ttyAMA0"    <span class="arch-note"># Pi 5 default UART</span>
+  serial_baud: 57600              <span class="arch-note"># Pixhawk TELEM2 default baud</span>
+
+  <span class="arch-note">Lưu ý: Enable UART trên Pi 5:</span>
+  <span class="arch-line">  sudo raspi-config → Interface Options → Serial Port → Disable shell → Enable UART</span></div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ─── AI AGENT GUIDE ─── -->
+    <section class="section" id="agent-guide">
+      <div class="section-title">
+        🤖 AI Agent Guide — Codebase Map
+        <a href="#agent-guide" class="anchor-link">#</a>
+      </div>
+      <p class="section-desc">Hướng dẫn dành cho AI agent (Claude, Cursor, Copilot...) hiểu cấu trúc repo và sửa code đúng chỗ.</p>
+
+      <div class="subsection">
+        <div class="subsection-title">Cấu trúc file và vai trò</div>
+        <table class="wiki-table">
+          <thead><tr><th>File</th><th>Vai trò</th><th>Khi nào sửa</th><th>Khi nào KHÔNG sửa</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>main.py</td>
+              <td>Entry point, wiring các module</td>
+              <td>Thêm module mới, thay đổi startup flow</td>
+              <td>Logic business, đừng thêm code nặng vào đây</td>
+            </tr>
+            <tr>
+              <td>auth_client.py</td>
+              <td>HMAC handshake, session management</td>
+              <td>Thay đổi protocol, thêm retry logic</td>
+              <td>Không sửa formula HMAC trừ khi server thay đổi spec</td>
+            </tr>
+            <tr>
+              <td>forwarder.py</td>
+              <td>MAVLink bridge Pi ↔ Server</td>
+              <td>Thêm filtering, thêm route mới, custom payload</td>
+              <td>Không thay đổi heartbeat_loop — ảnh hưởng NAT traversal</td>
+            </tr>
+            <tr>
+              <td>config.py</td>
+              <td>YAML parser</td>
+              <td>Thêm config section mới</td>
+              <td>Không hardcode giá trị</td>
+            </tr>
+            <tr>
+              <td>web_server.py</td>
+              <td>Flask status API</td>
+              <td>Thêm endpoints, thêm metrics</td>
+              <td>Không block event loop</td>
+            </tr>
+            <tr>
+              <td>config.yaml</td>
+              <td>Runtime config</td>
+              <td>Thay đổi credentials, ports, connection type</td>
+              <td>Không commit credentials thật lên git</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Dependency graph</div>
+        <div class="arch-diagram"><span class="arch-h">main.py</span>
+  ├── Config(config.yaml)       <span class="arch-note">config.py: parse YAML thành dict</span>
+  ├── AuthClient(cfg.auth)      <span class="arch-note">auth_client.py: TCP handshake, session</span>
+  │     └── .drone_secret       <span class="arch-note">JSON file: lưu secret_key sau đăng ký</span>
+  ├── Forwarder(cfg, auth)      <span class="arch-note">forwarder.py: MAVLink bridge</span>
+  │     ├── uplink_loop()       <span class="arch-note">Thread: FC → UDP server</span>
+  │     ├── downlink_loop()     <span class="arch-note">Thread: UDP server → FC</span>
+  │     └── heartbeat_loop()    <span class="arch-note">Thread: MSG_SESSION_REFRESH 1Hz</span>
+  └── start_server(web_port)    <span class="arch-note">web_server.py: Flask /api/status</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="agent-rules">
+      <div class="section-title">🤖 AI Agent — Quy tắc sửa code <a href="#agent-rules" class="anchor-link">#</a></div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 01 — Không bao giờ thay đổi HMAC formula</div>
+        <p>Công thức trong <code>auth_client.py → authenticate()</code>: <code>SHA256(secret_key + shared_secret)</code> rồi <code>HMAC-SHA256(combined_key, nonce)</code> là giao kèo với server. Thay đổi sẽ khiến auth fail hoàn toàn. Nếu task yêu cầu "sửa auth", hỏi lại có phải server đã thay đổi spec không.</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 02 — heartbeat_loop() phải duy trì 1Hz</div>
+        <p><code>forwarder.py → heartbeat_loop()</code> gửi <code>MSG_SESSION_REFRESH</code> mỗi 1 giây. Đây là cơ chế NAT traversal. Nếu dừng hoặc chậm hơn 10 giây, server mất endpoint UDP của drone. Không được sleep lâu hơn 1 giây trong hàm này.</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 03 — Session token phải tồn tại trước khi gửi MAVLink</div>
+        <p><code>uplink_loop()</code> check <code>if self.auth_client.session_token:</code> trước khi gửi. Đây là thiết kế đúng — không được bỏ check này. Nếu thêm route UDP mới, phải có cùng check này.</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 04 — Config mới phải có giá trị default</div>
+        <p>Khi thêm config section vào <code>config.yaml</code> và đọc trong code, luôn dùng <code>.get('key', default_value)</code>. Không dùng <code>['key']</code> trực tiếp — sẽ crash nếu người dùng không có key đó trong file config cũ.</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 05 — Thread mới phải là daemon</div>
+        <p>Mọi thread thêm vào phải có <code>daemon=True</code>: <code>threading.Thread(target=..., daemon=True).start()</code>. Thiếu điều này sẽ khiến <code>Ctrl+C</code> không tắt được process vì thread không chịu thoát.</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 06 — stats_lock khi truy cập self.stats</div>
+        <p><code>forwarder.py</code> có <code>self.stats_lock</code>. Mọi đọc/ghi <code>self.stats</code> phải dùng <code>with self.stats_lock:</code>. Web server đọc stats từ thread khác — race condition sẽ xảy ra nếu bỏ lock.</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 07 — Không ghi credentials vào code</div>
+        <p><code>uuid</code>, <code>shared_secret</code> phải đọc từ <code>config.yaml</code>, không hardcode trong Python. <code>.drone_secret</code> là file runtime, không commit lên git (đã có trong <code>.gitignore</code>).</p>
+      </div>
+
+      <div class="agent-rule">
+        <div class="rule-title">RULE 08 — File mới thêm phải được import trong main.py</div>
+        <p>Khi tạo module mới (<code>mavlink_emitter.py</code>, <code>ros2_bridge.py</code>...), phải wiring vào <code>main.py</code>. Module tự chạy khi import là anti-pattern — dùng <code>class</code> với method <code>start()</code> và gọi từ <code>main()</code>.</p>
+      </div>
+    </section>
+
+    <section class="section" id="agent-tasks">
+      <div class="section-title">🤖 AI Agent — Task Templates <a href="#agent-tasks" class="anchor-link">#</a></div>
+      <p class="section-desc">Copy prompt này và paste vào AI agent để thực hiện task chuẩn.</p>
+
+      <div class="subsection">
+        <div class="subsection-title">Task: Thêm Route 2 (MAVLink Emitter)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">PROMPT</span><span class="code-file">Copy vào Claude / Cursor</span></div>
+          <div class="code-body">Tôi muốn thêm MAVLink Emitter vào repo UAVLink-Edge-Python.
+
+Context:
+- Repo hiện có: main.py, auth_client.py, forwarder.py, config.py, web_server.py
+- forwarder.py đọc MAVLink từ pixhawk_conn (pymavlink connection)
+- Mục tiêu: thêm mavlink_emitter.py đọc sensor từ hardware tùy chỉnh
+  và phát MAVLink lên UDP 127.0.0.1:14540 để forwarder nhận
+
+Yêu cầu:
+1. Tạo mavlink_emitter.py với class MAVLinkEmitter
+2. Class phải có method start() chạy thread daemon
+3. Phải gửi: HEARTBEAT (1Hz), ATTITUDE (10Hz), GPS_RAW_INT (5Hz), BATTERY_STATUS (1Hz)
+4. Thêm placeholder method _read_hardware() để dev tùy chỉnh
+5. Sửa main.py: import và khởi động emitter TRƯỚC khi start forwarder
+6. Sửa config.yaml: đổi connection_type sang "udp_listen", tcp_port: 14540
+
+Rules không được vi phạm:
+- Không sửa auth_client.py
+- Thread mới phải daemon=True
+- Không hardcode credentials</div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Task: Thêm Route 3 (ROS2 Bridge)</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">PROMPT</span><span class="code-file">Copy vào Claude / Cursor</span></div>
+          <div class="code-body">Tôi muốn thêm ROS2 command bridge vào UAVLink-Edge-Python.
+
+Context:
+- forwarder.py có downlink_loop() nhận MAVLink từ server và ghi vào pixhawk_conn
+- Mục tiêu: thay vì ghi vào Pixhawk, forward command lên ROS2 topic /cmd_vel
+
+Yêu cầu:
+1. Tạo ros2_command_bridge.py với ROS2 Node class
+2. Node poll MAVLink messages từ forwarder (type: COMMAND_LONG, SET_POSITION_TARGET_LOCAL_NED)
+3. Convert và publish lên /cmd_vel (geometry_msgs/Twist)
+4. Thêm config section trong config.yaml: ros2: enabled: false, cmd_topic: /cmd_vel
+5. Sửa main.py: nếu cfg.ros2.get('enabled'): khởi động bridge
+6. Forwarder vẫn hoạt động bình thường nếu ROS2 disabled
+
+Rules: daemon threads, config defaults, không sửa auth_client.py</div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Task: Thêm auto-reconnect cho auth</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">PROMPT</span><span class="code-file">Copy vào Claude / Cursor</span></div>
+          <div class="code-body">Sửa auth_client.py để thêm auto-reconnect khi session hết hạn.
+
+Context:
+- keepalive_loop() hiện chỉ là placeholder, chưa làm gì
+- expires_at lưu timestamp Unix khi session hết hạn
+- refresh_interval là số giây giữa các lần refresh
+
+Yêu cầu:
+1. Sửa keepalive_loop() để check expires_at trước khi sleep
+2. Nếu còn < 30 giây đến hết hạn: gửi SESSION_REFRESH packet qua TCP
+3. Nếu session đã hết hạn: gọi lại authenticate() toàn bộ
+4. Implement get_session_refresh_packet() gửi qua TCP connection hiện có
+5. Thêm exponential backoff nếu reconnect fail (max 60s)
+6. Log rõ ràng: "Session refreshed", "Session expired, re-authenticating"
+
+KHÔNG thay đổi: công thức HMAC, cấu trúc packet, load_secret()</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ─── CONFIG REF ─── -->
+    <section class="section" id="config-ref">
+      <div class="section-title">config.yaml — Tham khảo đầy đủ <a href="#config-ref" class="anchor-link">#</a></div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">YAML</span><span class="code-file">config.yaml — tất cả options</span></div>
+        <div class="code-body"><span class="c"># ─── IDENTITY ───────────────────────────────────────────</span>
+auth:
+    enabled: <span class="v">true</span>
+    host: <span class="s">"45.117.171.237"</span>        <span class="c"># qcloudstation server IP</span>
+    port: <span class="n">5770</span>                    <span class="c"># TCP auth port</span>
+    uuid: <span class="s">"YOUR-DRONE-UUID"</span>        <span class="c"># Lấy từ qcloudstation</span>
+    shared_secret: <span class="s">"YOUR-SECRET"</span>  <span class="c"># Lấy từ qcloudstation</span>
+    keepalive_interval: <span class="n">30</span>        <span class="c"># Giây giữa các session refresh</span>
+
+<span class="c"># ─── MAVLINK SOURCE ──────────────────────────────────────</span>
+mavlink:
+    <span class="c"># "serial"     | UART với Pixhawk (Route 1)</span>
+    <span class="c"># "udp_listen" | Nhận từ emitter/MAVROS (Route 2, 3)</span>
+    <span class="c"># "tcp_client" | Kết nối vào MAVProxy</span>
+    <span class="c"># "tcp_listen" | FC kết nối vào Pi</span>
+    connection_type: <span class="s">"serial"</span>
+    
+    serial_port: <span class="s">"/dev/ttyAMA0"</span>   <span class="c"># UART0 trên Pi 5</span>
+    serial_baud: <span class="n">57600</span>            <span class="c"># Pixhawk TELEM2 default</span>
+    
+    tcp_host: <span class="s">"0.0.0.0"</span>          <span class="c"># Dùng cho tcp_listen / udp_listen</span>
+    tcp_port: <span class="n">14540</span>              <span class="c"># Port local nhận MAVLink</span>
+
+<span class="c"># ─── SERVER FORWARDING ────────────────────────────────────</span>
+forwarding:
+    target_host: <span class="s">"45.117.171.237"</span> <span class="c"># qcloudstation UDP target</span>
+    target_port: <span class="n">14550</span>           <span class="c"># MAVLink UDP port trên server</span>
+    protocol: <span class="s">"udp"</span>
+
+<span class="c"># ─── LOCAL WEB API ────────────────────────────────────────</span>
+web:
+    port: <span class="n">8080</span>                   <span class="c"># http://PI_IP:8080/api/status</span>
+
+<span class="c"># ─── LOGGING ──────────────────────────────────────────────</span>
+log:
+    level: <span class="s">"info"</span>                 <span class="c"># debug | info | warning | error</span>
+    verbose: <span class="v">false</span></div>
+      </div>
+    </section>
+
+    <!-- ─── TROUBLESHOOT ─── -->
+    <section class="section" id="troubleshoot">
+      <div class="section-title">Troubleshooting <a href="#troubleshoot" class="anchor-link">#</a></div>
+
+      <table class="wiki-table">
+        <thead><tr><th>Lỗi</th><th>Nguyên nhân</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>No secret key found. Registration required.</td><td>Chưa có file .drone_secret</td><td>Chạy lần đầu với shared_secret đúng để đăng ký, hoặc copy .drone_secret từ lần cũ</td></tr>
+          <tr><td>Authentication failed (Result=1, Error=...)</td><td>HMAC sai hoặc timestamp lệch quá 60s</td><td>Sync NTP: <code class="inline">sudo ntpdate pool.ntp.org</code>. Kiểm tra shared_secret đúng chưa</td></tr>
+          <tr><td>Connection failed: Connection refused</td><td>Sai host/port hoặc server offline</td><td>Ping server, kiểm tra host và port 5770 trong config</td></tr>
+          <tr><td>No MAVLink messages (rawIn = 0)</td><td>Sai serial_port hoặc UART chưa enable</td><td>Chạy <code class="inline">ls /dev/tty*</code>, thử <code class="inline">ttyUSB0</code> hoặc enable UART qua raspi-config</td></tr>
+          <tr><td>dropErr tăng, outServer = 0</td><td>Session token trống — auth chưa xong</td><td>Xem log auth, đảm bảo auth.start() trả True trước khi forwarder gửi</td></tr>
+          <tr><td>Session expires nhanh</td><td>keepalive_loop() chưa implement refresh</td><td>Implement TCP session refresh hoặc restart process trước khi hết hạn</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div><!-- /content -->
+
+  <footer class="wiki-footer">
+    <div>UAVLink-Edge DIY Wiki · qcloudcontrol.com · Cập nhật 2026-04</div>
+    <div>
+      <a href="https://github.com/your-org/UAVLink-Edge-Python">GitHub</a> ·
+      <a href="mailto:hbqsolution@gmail.com">hbqsolution@gmail.com</a>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+// ─── LANGUAGE SWITCHER ───
+function setLang(lang) {
+  document.body.className = document.body.className
+    .replace(/\bshow-(vi|en)\b/g, '')
+    .trim() + ' show-' + lang;
+  document.getElementById('btn-vi').classList.toggle('active', lang === 'vi');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.documentElement.lang = lang;
+  localStorage.setItem('wiki-lang', lang);
+}
+
+// Init language from storage or browser
+(function() {
+  const saved = localStorage.getItem('wiki-lang');
+  const preferred = saved || (navigator.language.startsWith('vi') ? 'vi' : 'en');
+  setLang(preferred);
+})();
+
+// ─── SCROLL PROGRESS ───
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('scrollLine');
+  const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  el.style.height = (pct * 100) + 'vh';
+});
+
+// ─── ACTIVE NAV HIGHLIGHT ───
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>
