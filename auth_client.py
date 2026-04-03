@@ -86,13 +86,16 @@ class AuthClient:
             logger.info("Received challenge")
 
             # Step 3: Compute HMAC
-            # Combined Key = SHA256(Secret + Shared)
-            combined_key_seed = (self.secret_key + self.shared_secret).encode('utf-8')
+            # Combined Key = SHA256(Shared + Secret)
+            combined_key_seed = (self.shared_secret + self.secret_key).encode('utf-8')
             combined_key = hashlib.sha256(combined_key_seed).hexdigest().encode('utf-8')
             
-            # HMAC-SHA256(combined_key, nonce)
-            signature = hmac.new(combined_key, nonce, hashlib.sha256).digest()
+            # HMAC-SHA256(combined_key, "UUID:NonceHex:Timestamp")
             timestamp = int(time.time())
+            nonce_hex = nonce.hex()
+            message = f"{self.drone_uuid}:{nonce_hex}:{timestamp}"
+            
+            signature = hmac.new(combined_key, message.encode('utf-8'), hashlib.sha256).digest()
 
             # Step 4: Send AUTH_RESPONSE
             # Format: [TYPE:1][UUID_LEN:2][UUID:var][HMAC_LEN:2][HMAC:32][TIMESTAMP:8][IP_LEN:2][IP:var]
@@ -214,10 +217,13 @@ class AuthClient:
             nonce = data[3 : 3 + nonce_len]
             
             # Step 3: Compute HMAC using SHARED SECRET ONLY for first registration
-            # Combined Key for Reg = SHA256(SharedSecret)
-            combined_key = hashlib.sha256(self.shared_secret.encode('utf-8')).hexdigest().encode('utf-8')
-            signature = hmac.new(combined_key, nonce, hashlib.sha256).digest()
+            # Server expects raw shared_secret as key and "UUID:NonceHex:Timestamp" as message
             timestamp = int(time.time())
+            nonce_hex = nonce.hex()
+            message = f"{self.drone_uuid}:{nonce_hex}:{timestamp}"
+            
+            hmac_key = self.shared_secret.encode('utf-8')
+            signature = hmac.new(hmac_key, message.encode('utf-8'), hashlib.sha256).digest()
 
             # Step 4: Send REGISTER_RESPONSE
             # Format: [TYPE:1][UUID_LEN:2][UUID:var][HMAC_LEN:2][HMAC:32][TIMESTAMP:8][IP_LEN:2][IP:var]
