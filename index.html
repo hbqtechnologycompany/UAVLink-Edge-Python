@@ -1733,7 +1733,7 @@
         <div class="code-block">
           <div class="code-header"><span class="code-lang">YAML</span><span class="code-file">config.yaml</span></div>
           <div class="code-body">auth:
-            host: <span class="s">"45.117.171.237"</span>
+            host: <span class="s">"https://qcloudcontrol.com"</span>
             port: 5770
             uuid: <span class="s">"YOUR-DRONE-UUID"</span> <span class="c"># Lấy từ qcloudstation</span>
             shared_secret: <span class="s">"YOUR-SHARED-SECRET"</span> <span class="c"># Lấy từ qcloudstation</span>
@@ -1745,7 +1745,8 @@
             serial_baud: 57600 <span class="c"># Pixhawk TELEM2 mặc định</span>
 
             forwarding:
-            target_host: <span class="s">"45.117.171.237"</span> <span class="c"># IP server qcloudstation</span>
+            target_host: <span class="s">"https://qcloudcontrol.com"</span> <span class="c"># IP server
+              qcloudstation</span>
             target_port: 14550</div>
         </div>
       </div>
@@ -2066,7 +2067,8 @@
         <div class="callout-icon">ℹ</div>
         <div><strong>MAVLink messages tối thiểu cần gửi:</strong> <code class="inline">HEARTBEAT</code> (bắt buộc, 1Hz),
           <code class="inline">ATTITUDE</code> (PFD), <code class="inline">GPS_RAW_INT</code> (bản đồ), <code
-            class="inline">BATTERY_STATUS</code> (UI). Server sẽ hoạt động đúng với chỉ 4 message types này.</div>
+            class="inline">BATTERY_STATUS</code> (UI). Server sẽ hoạt động đúng với chỉ 4 message types này.
+        </div>
       </div>
     </section>
 
@@ -2956,7 +2958,7 @@
             <span class="c"># Lấy từ config.yaml — xem section video bên dưới</span>
             self.source = self.cfg.get(<span class="s">'source'</span>, <span class="s">'picamera'</span>)
             self.rtsp_url = self.cfg.get(<span class="s">'mediamtx_rtsp'</span>, <span
-              class="s">'rtsp://45.117.171.237:8554'</span>)
+              class="s">'rtsp://qcloudcontrol.com:8554'</span>)
             self.drone_id = self.cfg.get(<span class="s">'stream_name'</span>, <span class="s">'drone1'</span>)
             self.width = self.cfg.get(<span class="s">'width'</span>, <span class="n">1280</span>)
             self.height = self.cfg.get(<span class="s">'height'</span>, <span class="n">720</span>)
@@ -3050,7 +3052,7 @@
             enabled: <span class="v">false</span> <span class="c"># true để bật video_streamer</span>
             source: <span class="s">"picamera"</span> <span class="c"># "picamera" hoặc "usb"</span>
             usb_device: <span class="s">"/dev/video0"</span> <span class="c"># chỉ dùng khi source: "usb"</span>
-            mediamtx_rtsp: <span class="s">"rtsp://45.117.171.237:8554"</span>
+            mediamtx_rtsp: <span class="s">"rtsp://qcloudcontrol.com:8554"</span>
             stream_name: <span class="s">"drone1"</span> <span class="c"># tên stream trên MediaMTX — phải unique</span>
             width: <span class="n">1280</span>
             height: <span class="n">720</span>
@@ -3620,35 +3622,40 @@
         <div class="rule-title">RULE 04 — Config mới phải có giá trị default</div>
         <p>Khi thêm config section vào <code>config.yaml</code> và đọc trong code, luôn dùng
           <code>.get('key', default_value)</code>. Không dùng <code>['key']</code> trực tiếp — sẽ crash nếu người dùng
-          không có key đó trong file config cũ.</p>
+          không có key đó trong file config cũ.
+        </p>
       </div>
 
       <div class="agent-rule">
         <div class="rule-title">RULE 05 — Thread mới phải là daemon</div>
         <p>Mọi thread thêm vào phải có <code>daemon=True</code>:
           <code>threading.Thread(target=..., daemon=True).start()</code>. Thiếu điều này sẽ khiến <code>Ctrl+C</code>
-          không tắt được process vì thread không chịu thoát.</p>
+          không tắt được process vì thread không chịu thoát.
+        </p>
       </div>
 
       <div class="agent-rule">
         <div class="rule-title">RULE 06 — stats_lock khi truy cập self.stats</div>
         <p><code>forwarder.py</code> có <code>self.stats_lock</code>. Mọi đọc/ghi <code>self.stats</code> phải dùng
           <code>with self.stats_lock:</code>. Web server đọc stats từ thread khác — race condition sẽ xảy ra nếu bỏ
-          lock.</p>
+          lock.
+        </p>
       </div>
 
       <div class="agent-rule">
         <div class="rule-title">RULE 07 — Không ghi credentials vào code</div>
         <p><code>uuid</code>, <code>shared_secret</code> phải đọc từ <code>config.yaml</code>, không hardcode trong
           Python. <code>.drone_secret</code> là file runtime, không commit lên git (đã có trong
-          <code>.gitignore</code>).</p>
+          <code>.gitignore</code>).
+        </p>
       </div>
 
       <div class="agent-rule">
         <div class="rule-title">RULE 08 — File mới thêm phải được import trong main.py</div>
         <p>Khi tạo module mới (<code>mavlink_emitter.py</code>, <code>ros2_bridge.py</code>...), phải wiring vào
           <code>main.py</code>. Module tự chạy khi import là anti-pattern — dùng <code>class</code> với method
-          <code>start()</code> và gọi từ <code>main()</code>.</p>
+          <code>start()</code> và gọi từ <code>main()</code>.
+        </p>
       </div>
     </section>
 
@@ -3741,7 +3748,7 @@
         <div class="code-body"><span class="c"># ─── IDENTITY ───────────────────────────────────────────</span>
           auth:
           enabled: <span class="v">true</span>
-          host: <span class="s">"45.117.171.237"</span> <span class="c"># qcloudstation server IP</span>
+          host: <span class="s">"https://qcloudcontrol.com"</span> <span class="c"># qcloudstation server IP</span>
           port: <span class="n">5770</span> <span class="c"># TCP auth port</span>
           uuid: <span class="s">"YOUR-DRONE-UUID"</span> <span class="c"># Lấy từ qcloudstation</span>
           shared_secret: <span class="s">"YOUR-SECRET"</span> <span class="c"># Lấy từ qcloudstation</span>
@@ -3763,7 +3770,8 @@
 
           <span class="c"># ─── SERVER FORWARDING ────────────────────────────────────</span>
           forwarding:
-          target_host: <span class="s">"45.117.171.237"</span> <span class="c"># qcloudstation UDP target</span>
+          target_host: <span class="s">"https://qcloudcontrol.com"</span> <span class="c"># qcloudstation UDP
+            target</span>
           target_port: <span class="n">14550</span> <span class="c"># MAVLink UDP port trên server</span>
           protocol: <span class="s">"udp"</span>
 
