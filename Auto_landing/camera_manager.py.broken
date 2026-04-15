@@ -1,0 +1,296 @@
+
+
+import threading
+import time
+# Pi Camera (commented out - using laptop camera instead)
+# from picamera2 import Picamera2
+import cv2  # Using OpenCV for laptop camera
+import numpy as np
+import json
+import os
+
+
+class CameraManager:
+  
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(CameraManager, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+            
+        with self._lock:
+            if not self._initialized:
+                self.cameras = {} 
+                self.camera_locks = {}  
+                self.camera_configs = {}  
+                self.camera_users = {}  
+                self._initialized = True
+    
+    def get_camera(self, camera_id, user_id=None, config=None):
+      
+        with self._lock:
+            if camera_id not in self.cameras:
+                try:
+                    camera = self._initialize_camera(camera_id, config)
+                    if camera is None:
+                        return None
+                    
+                    self.cameras[camera_id] = camera
+                    self.camera_locks[camera_id] = threading.Lock()
+                    self.camera_configs[camera_id] = config or {}
+                    self.camera_users[camera_id] = set()
+                    
+                    print(f"Camera {camera_id} đã được khởi tạo")
+                except Exception as e:
+                    print(f"Lỗi khởi tạo camera {camera_id}: {e}")
+                    return None
+            
+            if user_id:
+                self.camera_users[camera_id].add(user_id)
+            
+            return self.cameras[camera_id]
+    
+    def _initialize_camera(self, camera_id, config=None):
+        """Initialize laptop camera using OpenCV"""
+        # === PI CAMERA CODE (COMMENTED OUT) ===
+        # try:
+        #     camera = Picamera2(camera_id)
+        #     
+        #     # Default config
+        #     default_config = {
+        #         'format': 'RGB888',
+        #         'size': (640, 480)
+        #     }
+        #     
+        #     # If no config provided, try to load from JSON file
+        #     if config is None:
+        #         config_file = os.path.join(os.path.dirname(__file__), 'camera_config.json')
+        #         if os.path.exists(config_file):
+        #             try:
+        #                 with open(config_file, 'r') as f:
+        #                     saved_config = json.load(f)
+        #                     if 'size' in saved_config and isinstance(saved_config['size'], list):
+        #                         saved_config['size'] = tuple(saved_config['size'])
+        #                     default_config.update(saved_config)
+        #                     print(f"✓ Loaded camera config from {config_file}")
+        #             except Exception as e:
+        #                 print(f"⚠ Error loading camera config: {e}, using defaults")
+        #     
+        #     # Override with provided config if any
+        #     if config:
+        #         default_config.update(config)
+        #         print(f"✓ Using provided camera config: {config}")
+        #     
+        #     camera_config = camera.create_still_configuration(
+        #         main={"format": default_config['format'], 
+        #               "size": default_config['size']}
+        #     )
+        #     
+        #     camera.configure(camera_config)
+        #     
+        #     # Apply brightness, contrast, exposure if specified
+        #     if 'brightness' in default_config or 'contrast' in default_config or 'exposure_time' in default_config:
+        #         controls = {}
+        #         if 'brightness' in default_config and default_config['brightness'] != 0:
+        #             controls['Brightness'] = default_config['brightness']
+        #         if 'contrast' in default_config and default_config['contrast'] != 1.0:
+        #             controls['Contrast'] = default_config['contrast']
+        #         if 'exposure_time' in default_config and default_config['exposure_time'] > 0:
+        #             controls['ExposureTime'] = default_config['exposure_time']
+        #         
+        #         if controls:
+        #             camera.set_controls(controls)
+        #             print(f"✓ Applied camera controls: {controls}")
+        #     
+        #     camera.start()
+        #     time.sleep(0.5)
+        #     return camera
+        # === END PI CAMERA CODE ===
+        
+        # === LAPTOP CAMERA CODE (OpenCV) ===
+        try:
+            # Default config
+            default_config = {
+                'format': 'RGB888',
+                'size': (640, 480)
+            }
+            
+            # Load config from JSON if available
+            if config is None:
+                config_file = os.path.join(os.path.dirname(__file__), 'camera_config.json')
+                if os.path.exists(config_file):
+                    try:
+                        with open(config_file, 'r') as f:
+                            saved_config = json.load(f)
+                            if 'size' in saved_config and isinstance(saved_config['size'], list):
+                                saved_config['size'] = tuple(saved_config['size'])
+                            default_config.update(saved_config)
+                            print(f"✓ Loaded camera config from {config_file}")
+                    except Exception as e:
+                        print(f"⚠ Error loading camera config: {e}, using defaults")
+            
+            # Override with provided config
+            if config:
+                default_config.update(config)
+                print(f"✓ Using provided camera config: {config}")
+            
+            # Initialize OpenCV VideoCapture
+            camera = cv2.VideoCapture(camera_id)
+            
+            if not camera.isOpened():
+                print(f"✗ Failed to open camera {camera_id}")
+                return None
+            
+            # Set resolution
+            width, height = default_config['size']
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+            
+            # Set FPS if specified
+            if 'framerate' in default_config:
+                camera.set(cv2.CAP_PROP_FPS, default_config['framerate'])
+            
+            # Apply brightness and contrast if specified
+            if 'brightness' in default_config:
+                camera.set(cv2.CAP_PROP_BRIGHTNESS, default_config['brightness'])
+            if 'contrast' in default_config:
+                camera.set(cv2.CAP_PROP_CONTRAST, default_config['contrast'])
+            if 'exposure' in default_config:
+                camera.set(cv2.CAP_PROP_EXPOSURE, default_config['exposure'])
+            
+            # Test capture
+            ret, frame = camera.read()
+            if not ret:
+                print(f"✗ Failed to capture test frame from camera {camera_id}")
+                camera.release()
+                return None
+            
+            print(f"✓ Laptop camera {camera_id} initialized: {int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
+            
+            time.sleep(0.1)
+            return camera
+            
+        except Exception as e:
+            print(f"Lỗi trong _initialize_camera cho camera {camera_id}: {e}")
+            return None
+    
+    def capture_frame(self, camera_id, user_id=None):
+        """Capture frame from laptop camera"""
+        camera = self.get_camera(camera_id, user_id)
+        if camera is None:
+            return None
+        
+        lock = self.camera_locks.get(camera_id)
+        if lock:
+            with lock:
+                try:
+                    # Pi Camera code (commented)
+                    # frame = camera.capture_array()
+                    
+                    # Laptop camera code (OpenCV)
+                    ret, frame = camera.read()
+                    if not ret:
+                        print(f"✗ Failed to read frame from camera {camera_id}")
+                        return None
+                    
+                    # Convert BGR to RGB (OpenCV uses BGR, but Pi camera uses RGB)
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    return frame
+                except Exception as e:
+                    print(f"Lỗi capture frame từ camera {camera_id}: {e}")
+                    return None
+        return None
+    
+    def release_camera(self, camera_id, user_id=None):
+      
+        with self._lock:
+            if camera_id not in self.cameras:
+                return# Pi Camera code (commented)
+                        # try:
+                        #     camera.stop()
+                        # except:
+                        #     pass
+                        # try:
+                        #     camera.close()
+                        # except:
+                        #     pass
+                        
+                        # Laptop camera code (OpenCV)
+                        try:
+                            camera.release()
+                        except:
+                            pass
+                    
+                    del self.cameras[camera_id]
+                    if camera_id in self.camera_locks:
+                        del self.camera_locks[camera_id]
+                    if camera_id in self.camera_configs:
+                        del self.camera_configs[camera_id]
+                    if camera_id in self.camera_users:
+                        del self.camera_users[camera_id]
+                    
+                    print(f"Camera {camera_id} đã được giải phóng")
+                    
+                    # Wait a bit for camera to be fully released
+                    time.sleep(0.2n self.camera_locks:
+                        del self.camera_locks[camera_id]
+                    if camera_id in self.camera_configs:
+                        del self.camera_configs[camera_id]
+                    if camera_id in self.camera_users:
+                        del self.camera_users[camera_id]
+                    
+                    print(f"Camera {camera_id} đã được giải phóng")
+                    
+                    # Wait a bit for camera to be fully released
+                    time.sleep(0.5)
+                except Exception as e:
+                    print(f"Lỗi giải phóng camera {camera_id}: {e}")
+    
+    def is_camera_active(self, camera_id):
+      
+        """Release all cameras"""
+        with self._lock:
+            camera_ids = list(self.cameras.keys())
+            for camera_id in camera_ids:
+                try:
+                    camera = self.cameras[camera_id]
+                    if camera:
+                        # Pi Camera code (commented)
+                        # camera.stop()
+                        # camera.close()
+                        
+                        # Laptop camera code (OpenCV)
+                        camera.relea
+            camera_ids = list(self.cameras.keys())
+            for camera_id in camera_ids:
+                try:
+                    camera = self.cameras[camera_id]
+                    if camera:
+                        camera.stop()
+                        camera.close()
+                    print(f"Camera {camera_id} đã được dừng")
+                except Exception as e:
+                    print(f"Lỗi khi dừng camera {camera_id}: {e}")
+            
+            self.cameras.clear()
+            self.camera_locks.clear()
+            self.camera_configs.clear()
+            self.camera_users.clear()
+
+
+
+_camera_manager_instance = CameraManager()
+
+
+def get_camera_manager():
+
+    return _camera_manager_instance

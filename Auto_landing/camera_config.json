@@ -1,0 +1,21 @@
+{
+  "bitrate": 5000,
+  "brightness": 0,
+  "camera_id": 0,
+  "contrast": 1,
+  "detection_enabled": true,
+  "drone_id": "00000028-0000-0000-0000-000000000028",
+  "exposure_time": 0,
+  "format": "RGB888",
+  "framerate": 30,
+  "keyframe_interval": 30,
+  "mediamtx_host": "45.117.171.237",
+  "mediamtx_port": 8554,
+  "overlay_enabled": true,
+  "preset": "ultrafast",
+  "size": [
+    640,
+    480
+  ],
+  "tune": "zerolatency"
+}
