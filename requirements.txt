@@ -1,4 +1,5 @@
 pymavlink
+pyserial
 pyyaml
 flask
 requests
