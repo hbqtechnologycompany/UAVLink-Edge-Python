@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MAVLink Settings - UAVLink-Edge</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="common-nav.css" rel="stylesheet">
+    <script src="common-nav.js"></script>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -212,13 +214,11 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <a href="/dashboard.html" class="back-btn">
-                ← Back to Dashboard
-            </a>
-            <h1>⚙️ MAVLink Connection Settings</h1>
-        </div>
+    <header class="db-shell-header">
+        <a href="/dashboard.html" class="db-back-btn">← Về Dashboard</a>
+        <h1 class="db-shell-title">⚙️ MAVLink Connection Settings</h1>
+    </header>
+    <div class="container" style="padding-top:1rem;">
 
         <div class="alert alert-warning" id="restartWarning">
             ⚠️ Changes require service restart to take effect
@@ -232,13 +232,23 @@
             <div class="form-group">
                 <label class="form-label">Connection Type</label>
                 <div class="radio-group">
-                    <label class="radio-option" id="option-ethernet">
-                        <input type="radio" name="connection_type" value="ethernet" checked>
+                    <label class="radio-option selected" id="option-prefer-ethernet">
+                        <input type="radio" name="connection_type" value="prefer_ethernet" checked>
                         <div class="radio-label">
                             <span>🌐</span>
                             <div>
-                                <div>Ethernet</div>
-                                <div class="form-description">Connect via UDP over Ethernet (default)</div>
+                                <div>ETH ưu tiên + UART backup</div>
+                                <div class="form-description">UDP Ethernet chính, tự fallback sang UART</div>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="radio-option" id="option-ethernet">
+                        <input type="radio" name="connection_type" value="ethernet">
+                        <div class="radio-label">
+                            <span>🔌</span>
+                            <div>
+                                <div>Ethernet (UDP only)</div>
+                                <div class="form-description">Chỉ nhận MAVLink qua UDP</div>
                             </div>
                         </div>
                     </label>
@@ -258,18 +268,61 @@
             <div id="ethernet-settings">
                 <h3 style="margin: 1.5rem 0 1rem; color: var(--text-secondary);">Ethernet Settings</h3>
                 <div class="form-group">
-                    <label class="form-label">Local Listen Port</label>
-                    <input type="number" class="form-input" id="local_listen_port" value="14542">
-                    <div class="form-description">UDP port to listen for MAVLink messages</div>
+                    <label class="form-label">CM5 Local IP</label>
+                    <input type="text" class="form-input" id="eth_local_ip" placeholder="10.41.10.10">
+                    <div class="form-description">IP tĩnh CM5 trên cổng Ethernet — đổi được theo mạng của bạn (mặc định 10.41.10.10)</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pixhawk IP</label>
+                    <input type="text" class="form-input" id="eth_pixhawk_ip" placeholder="10.41.10.2">
+                    <div class="form-description">IP PX4 trên cùng subnet Ethernet (mặc định 10.41.10.2)</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Broadcast IP</label>
+                    <input type="text" class="form-input" id="eth_broadcast_ip" placeholder="10.41.10.255">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Interface</label>
+                    <input type="text" class="form-input" id="eth_interface" placeholder="eth0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subnet (CIDR)</label>
+                    <input type="text" class="form-input" id="eth_subnet" placeholder="24">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Local Listen Port (PX4 → CM5)</label>
+                    <input type="number" class="form-input" id="local_listen_port" value="14550">
+                    <div class="form-description">Port CM5 lắng nghe UDP từ PX4 — khớp MAV_0_REMOTE_PRT trên PX4 (mặc định 14550). PX4 thường 10.41.10.2 gửi tới 10.41.10.10:14550.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pixhawk Port</label>
+                    <input type="number" class="form-input" id="eth_pixhawk_port" value="14550">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cloud Target Port (CM5 → Server)</label>
+                    <input type="number" class="form-input" id="target_port" value="14550" readonly>
+                    <div class="form-description">Chỉ đọc — MAVLink gửi lên Hybrid Router qua VPN (10.8.0.1:14550)</div>
                 </div>
             </div>
 
-            <div id="serial-settings" style="display: none;">
+            <div id="serial-settings">
                 <h3 style="margin: 1.5rem 0 1rem; color: var(--text-secondary);">Serial Settings</h3>
                 <div class="form-group">
+                    <label class="form-label">UART Preset (CM5 / Pi5)</label>
+                    <select class="form-select" id="uart_preset" onchange="applyUartPreset()">
+                        <option value="custom">Tùy chỉnh</option>
+                        <option value="/dev/ttyAMA0">UART0 — /dev/ttyAMA0</option>
+                        <option value="/dev/ttyAMA1">UART1 — /dev/ttyAMA1 (GPIO 8–11)</option>
+                        <option value="/dev/ttyAMA2">UART2 / TELEM2 — /dev/ttyAMA2 (GPIO 4–7)</option>
+                        <option value="/dev/serial0">serial0 (alias UART0)</option>
+                        <option value="/dev/ttyUSB0">USB — /dev/ttyUSB0</option>
+                        <option value="/dev/ttyACM0">USB ACM — /dev/ttyACM0</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Serial Port</label>
-                    <input type="text" class="form-input" id="serial_port" value="/dev/ttyUSB0" placeholder="/dev/ttyUSB0 or /dev/ttyACM0">
-                    <div class="form-description">Serial device for Pixhawk (e.g., /dev/ttyUSB0, /dev/ttyACM0)</div>
+                    <input type="text" class="form-input" id="serial_port" value="/dev/ttyAMA2" placeholder="/dev/ttyAMA2" oninput="syncUartPreset()">
+                    <div class="form-description">UART2 GPIO 4-7 thường là /dev/ttyAMA2 (cần dtoverlay=uart2). UART1 → /dev/ttyAMA1.</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Baud Rate</label>
@@ -297,27 +350,51 @@
     </div>
 
     <script>
+        const UART_PRESETS = ['/dev/ttyAMA0', '/dev/ttyAMA1', '/dev/ttyAMA2', '/dev/serial0', '/dev/ttyUSB0', '/dev/ttyACM0'];
+
+        function cfgSection(config, snake, pascal) {
+            return config[snake] || config[pascal] || {};
+        }
+
+        function cfgVal(obj, snake, pascal, fallback) {
+            if (obj[snake] !== undefined && obj[snake] !== null && obj[snake] !== '') return obj[snake];
+            if (obj[pascal] !== undefined && obj[pascal] !== null && obj[pascal] !== '') return obj[pascal];
+            return fallback;
+        }
+
+        function applyUartPreset() {
+            const preset = document.getElementById('uart_preset').value;
+            if (preset !== 'custom') {
+                document.getElementById('serial_port').value = preset;
+            }
+        }
+
+        function syncUartPreset() {
+            const port = document.getElementById('serial_port').value.trim();
+            const sel = document.getElementById('uart_preset');
+            sel.value = UART_PRESETS.includes(port) ? port : 'custom';
+        }
+
         const connectionTypeRadios = document.querySelectorAll('input[name="connection_type"]');
         const ethernetSettings = document.getElementById('ethernet-settings');
         const serialSettings = document.getElementById('serial-settings');
+        const optionPreferEthernet = document.getElementById('option-prefer-ethernet');
         const optionEthernet = document.getElementById('option-ethernet');
         const optionSerial = document.getElementById('option-serial');
 
+        function updateConnectionTypeUI(connType) {
+            const showSerial = connType === 'serial' || connType === 'prefer_ethernet';
+            const showEthernet = connType === 'ethernet' || connType === 'prefer_ethernet';
+            ethernetSettings.style.display = showEthernet ? 'block' : 'none';
+            serialSettings.style.display = showSerial ? 'block' : 'none';
+            optionPreferEthernet.classList.toggle('selected', connType === 'prefer_ethernet');
+            optionEthernet.classList.toggle('selected', connType === 'ethernet');
+            optionSerial.classList.toggle('selected', connType === 'serial');
+        }
+
         // Toggle settings visibility based on connection type
         connectionTypeRadios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                if (e.target.value === 'ethernet') {
-                    ethernetSettings.style.display = 'block';
-                    serialSettings.style.display = 'none';
-                    optionEthernet.classList.add('selected');
-                    optionSerial.classList.remove('selected');
-                } else {
-                    ethernetSettings.style.display = 'none';
-                    serialSettings.style.display = 'block';
-                    optionEthernet.classList.remove('selected');
-                    optionSerial.classList.add('selected');
-                }
-            });
+            radio.addEventListener('change', (e) => updateConnectionTypeUI(e.target.value));
         });
 
         // Show alert
@@ -338,18 +415,40 @@
                 
                 if (data.success) {
                     const config = data.config;
+                    const net = cfgSection(config, 'network', 'Network');
+                    const eth = cfgSection(config, 'ethernet', 'Ethernet');
                     
                     // Set connection type
-                    const connType = config.network.connection_type || 'ethernet';
-                    document.querySelector(`input[name="connection_type"][value="${connType}"]`).checked = true;
-                    document.querySelector(`input[name="connection_type"][value="${connType}"]`).dispatchEvent(new Event('change'));
+                    const connType = cfgVal(net, 'connection_type', 'ConnectionType', 'prefer_ethernet');
+                    const radio = document.querySelector(`input[name="connection_type"][value="${connType}"]`)
+                        || document.querySelector('input[name="connection_type"][value="prefer_ethernet"]');
+                    radio.checked = true;
+                    updateConnectionTypeUI(radio.value);
                     
-                    // Set values
-                    document.getElementById('local_listen_port').value = config.network.local_listen_port || 14542;
-                    document.getElementById('serial_port').value = config.network.serial_port || '/dev/ttyUSB0';
-                    document.getElementById('serial_baud').value = config.network.serial_baud || 57600;
+                    document.getElementById('local_listen_port').value =
+                        cfgVal(net, 'local_listen_port', 'LocalListenPort', 14550);
+                    document.getElementById('target_port').value =
+                        cfgVal(net, 'target_port', 'TargetPort', 14550);
+                    document.getElementById('serial_port').value =
+                        cfgVal(net, 'serial_port', 'SerialPort', '/dev/ttyAMA2');
+                    syncUartPreset();
+                    document.getElementById('serial_baud').value =
+                        cfgVal(net, 'serial_baud', 'SerialBaud', 57600);
+
+                    document.getElementById('eth_local_ip').value =
+                        cfgVal(eth, 'local_ip', 'LocalIP', '10.41.10.10');
+                    document.getElementById('eth_pixhawk_ip').value =
+                        cfgVal(eth, 'pixhawk_ip', 'PixhawkIP', '10.41.10.2');
+                    document.getElementById('eth_broadcast_ip').value =
+                        cfgVal(eth, 'broadcast_ip', 'BroadcastIP', '10.41.10.255');
+                    document.getElementById('eth_interface').value =
+                        cfgVal(eth, 'interface', 'Interface', 'eth0');
+                    document.getElementById('eth_subnet').value =
+                        cfgVal(eth, 'subnet', 'Subnet', '24');
+                    document.getElementById('eth_pixhawk_port').value =
+                        cfgVal(eth, 'pixhawk_port', 'PixhawkPort', 14550);
                     
-                    console.log('Settings loaded:', config.network);
+                    console.log('Settings loaded:', net, eth);
                 } else {
                     showAlert('Failed to load settings: ' + data.message, 'error');
                 }
@@ -372,6 +471,12 @@
                 local_listen_port: parseInt(document.getElementById('local_listen_port').value),
                 serial_port: document.getElementById('serial_port').value,
                 serial_baud: parseInt(document.getElementById('serial_baud').value),
+                local_ip: document.getElementById('eth_local_ip').value.trim(),
+                pixhawk_ip: document.getElementById('eth_pixhawk_ip').value.trim(),
+                broadcast_ip: document.getElementById('eth_broadcast_ip').value.trim(),
+                interface: document.getElementById('eth_interface').value.trim(),
+                subnet: document.getElementById('eth_subnet').value.trim(),
+                pixhawk_port: parseInt(document.getElementById('eth_pixhawk_port').value),
             };
 
             try {

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parameter Editor - UAVLink-Edge</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="common-nav.css" rel="stylesheet">
+    <script src="common-nav.js"></script>
     <style>
         :root {
             --bg-primary: #1e1e1e;
@@ -38,7 +40,7 @@
         .app-container {
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            height: calc(100vh - 52px);
         }
 
         /* Top Navigation Bar */
@@ -596,19 +598,14 @@
     </style>
 </head>
 <body>
+    <header class="db-shell-header">
+        <a href="/dashboard.html" class="db-back-btn">← Về Dashboard</a>
+        <h1 class="db-shell-title">⚙️ Parameter Editor</h1>
+        <div class="db-shell-actions">
+            <a href="mavlink.html" style="color:#94a3b8;text-decoration:none;font-size:0.85rem;">📡 MAVLink</a>
+        </div>
+    </header>
     <div class="app-container">
-        <!-- Top Navigation -->
-        <nav class="top-nav">
-            <a href="dashboard.html" class="nav-brand" style="text-decoration: none;">
-                <span>🚁</span>
-                <span>UAVLink-Edge</span>
-            </a>
-            <span class="nav-title">Parameter Editor</span>
-            <div style="flex: 1;"></div>
-            <a href="mavlink.html" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; padding: 0.4rem 0.75rem; margin-right: 0.5rem; transition: all 0.2s;" onmouseover="this.style.color='var(--text-primary)';" onmouseout="this.style.color='var(--text-secondary)';">📡 MAVLink</a>
-        </nav>
-
-        <!-- Main Content -->
         <div class="main-container">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
@@ -1493,7 +1490,7 @@
         // Cache parameters in localStorage for faster load on next visit
         window.addEventListener('beforeunload', () => {
             try {
-                localStorage.setItem('UAVLink-Edge_params_cache', JSON.stringify(parameters.map(p => ({
+                localStorage.setItem('dronebridge_params_cache', JSON.stringify(parameters.map(p => ({
                     name: p.name,
                     value: p.value,
                     defaultValue: p.defaultValue

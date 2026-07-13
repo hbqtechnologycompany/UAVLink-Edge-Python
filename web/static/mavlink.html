@@ -8,6 +8,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
+    <link href="common-nav.css" rel="stylesheet">
+    <script src="common-nav.js"></script>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -32,7 +34,8 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.5;
-            padding: 2rem;
+            padding: 0;
+            margin: 0;
         }
 
         .container {
@@ -41,6 +44,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
+            padding: 1.5rem 2rem 2rem;
         }
 
         .header {
@@ -187,21 +191,14 @@
 </head>
 
 <body>
-    <div class="container">
-        <div class="header">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 1rem;">
-                <a href="dashboard.html"
-                    style="color: #94a3b8; text-decoration: none; font-size: 0.9rem; padding: 0.5rem 1rem; background: #1e293b; border-radius: 0.5rem; border: 1px solid #334155; transition: all 0.2s;"
-                    onmouseover="this.style.color='#f1f5f9'; this.style.borderColor='#3b82f6';"
-                    onmouseout="this.style.color='#94a3b8'; this.style.borderColor='#334155';">← Back</a>
-                <div style="text-align: right;">
-                    <small style="color: #64748b;">MAVLink Dashboard</small>
-                </div>
-            </div>
-            <h1>🚁 MAVLink Monitor</h1>
-            <div id="connection-status" class="status-ok">● Connected</div>
+    <header class="db-shell-header">
+        <a href="/dashboard.html" class="db-back-btn">← Về Dashboard</a>
+        <h1 class="db-shell-title">🚁 MAVLink Monitor</h1>
+        <div class="db-shell-actions">
+            <div id="connection-status" class="status-ok" style="font-size:0.85rem;">● Connected</div>
         </div>
+    </header>
+    <div class="container">
 
         <div class="card">
             <h2>System Status</h2>
@@ -231,7 +228,7 @@
                     <div id="time-remaining" class="status-value">N/A</div>
                 </div>
                 <div class="status-item">
-                    <div class="status-label" title="Mọi gói MAVLink nhận từ PX4 (serial/TCP/UDP)">MAVLink In (PX4)</div>
+                    <div class="status-label" title="Mọi gói MAVLink UDP nhận trên cổng 14550 (PX4, QGC, simulator, …)">MAVLink In :14550</div>
                     <div id="udp-raw-in" class="status-value">0 msg/s</div>
                 </div>
                 <div class="status-item">
@@ -294,7 +291,13 @@
                     const authStatus = document.getElementById('auth-status');
                     const serverOk = data.server_reachable || data.auth_status === 'Authenticated';
                     authStatus.className = 'status-value ' + (serverOk ? 'status-ok' : 'status-err');
-                    authStatus.textContent = data.auth_status;
+                    if (data.auth_status === 'Reconnecting') {
+                        authStatus.textContent = 'Reconnecting...';
+                    } else if (data.auth_status === 'Disconnected' && data.disconnect_reason) {
+                        authStatus.textContent = 'Disconnected (' + data.disconnect_reason + ')';
+                    } else {
+                        authStatus.textContent = data.auth_status;
+                    }
 
                     document.getElementById('uptime').textContent = data.uptime.split('.')[0] + 's';
 
@@ -319,8 +322,8 @@
                     const rawIn = data.udp_raw_in_per_sec || 0;
                     const msgRate = data.mavlink_uplink_msg_per_sec || data.udp_msg_per_sec || 0;
                     const byteRate = data.mavlink_uplink_bytes_per_sec || data.udp_bytes_per_sec || 0;
-                    document.getElementById('udp-raw-in').textContent = Number(rawIn).toFixed(1) + ' msg/s';
-                    document.getElementById('udp-msg-rate').textContent = Number(msgRate).toFixed(1) + ' msg/s';
+                    document.getElementById('udp-raw-in').textContent = rawIn.toFixed(1) + ' msg/s';
+                    document.getElementById('udp-msg-rate').textContent = msgRate.toFixed(1) + ' msg/s';
                     document.getElementById('udp-byte-rate').textContent = formatByteRate(byteRate);
 
                     // Update Packet Statistics

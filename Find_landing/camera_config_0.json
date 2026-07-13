@@ -1,0 +1,21 @@
+{
+  "camera_id": 0,
+  "size": [
+    640,
+    480
+  ],
+  "framerate": 30,
+  "format": "RGB888",
+  "mediamtx_host": "45.117.171.237",
+  "mediamtx_port": 8554,
+  "mediamtx_webrtc_port": 8889,
+  "mediamtx_hls_port": 8888,
+  "publish_path": "/9f14f259-576c-41ad-90f9-783e6d831455/cam0",
+  "drone_id": "9f14f259-576c-41ad-90f9-783e6d831455",
+  "bitrate": 5000,
+  "overlay_enabled": true,
+  "detection_enabled": true,
+  "keyframe_interval": 30,
+  "preset": "ultrafast",
+  "tune": "zerolatency"
+}

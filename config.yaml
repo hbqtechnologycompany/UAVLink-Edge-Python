@@ -2,22 +2,38 @@ auth:
   enabled: true
   host: 45.117.171.237
   port: 5770
-  uuid: 00000011-0000-0000-0000-000000000011
+  uuid: 0000000f-0000-0000-0000-00000000000f
   shared_secret: drone-fleet-shared-secret-auth-key-2025
   keepalive_interval: 30
+  session_heartbeat_frequency: 1.0
+  vehicle_type: 0
+  model: ""
 network:
-  connection_type: serial
+  connection_type: prefer_ethernet
   serial_port: /dev/ttyAMA2
   serial_baud: 921600
   tcp_host: 0.0.0.0
   tcp_port: 14540
-  local_listen_port: 14540
+  local_listen_port: 14550
   target_host: 10.8.0.1
   target_port: 14550
   protocol: udp
-  mode: wifi_only
+  mode: prefer_4g
+  cloud_wifi_fallback: false
+  forward_gps_raw_int: false
+  fallback_delay: 300
+ethernet:
+  interface: eth0
+  local_ip: "10.41.10.10"
+  broadcast_ip: "10.41.10.255"
+  pixhawk_ip: "10.41.10.2"
+  pixhawk_port: 14550
+  auto_setup: true
+  subnet: "24"
+  pixhawk_connection_timeout: 30
+  allow_missing_pixhawk: true
 mavlink:
-  connection_type: serial
+  connection_type: prefer_ethernet
   serial_port: /dev/ttyAMA2
   serial_baud: 921600
   tcp_host: 0.0.0.0
@@ -31,11 +47,16 @@ web:
 camera:
   enabled: true
   auto_start: false
+  auto_setup: true
   mediamtx_port: 8554
   mediamtx_webrtc_port: 8889
   mediamtx_hls_port: 8888
   publish_path_cam0_suffix: cam0
   publish_path_cam1_suffix: cam1
+  primary_camera_id: 0
+  auto_memory_profile: true
+  mavlink_status_enabled: true
+  mavlink_status_hz: 1.0
   streams:
   - name: cam0
     camera_id: 0
@@ -71,6 +92,25 @@ camera:
     keyframe_interval: 30
     preset: ultrafast
     tune: zerolatency
+landing:
+  environment: outdoor
+  marker_type: H
+  mode: normal
+  safety_level: 2
+  template: H
+  mavlink_enabled: false
+  mavlink_hz: 10
+  mavlink_camera_id: 1
+lcd:
+  enabled: false
+  auto_setup: false
+  overlay: i2c3-pi5
+  pins: pins_22_23
+  bus: 3
+  address: 60
+  interval: 1
+  screen_hold: 5
+  screen: alt
 video:
   source: none
   mediamtx_rtsp: rtsp://45.117.171.237:8554

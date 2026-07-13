@@ -19,6 +19,7 @@ from web.mavlink_bridge import bridge
 import network_controller
 from web.network_helpers import read_network_status
 from web import camera_handlers, landing_handlers
+from web import network_mode
 from telemetry import global_telemetry
 from logging_setup import configure_quiet_werkzeug
 
@@ -239,10 +240,13 @@ def api_key_status():
         }
     try:
         state = _auth_ref.get_api_key_status()
+        api_key = state.get("api_key")
+        if not api_key and getattr(_auth_ref, "api_key", ""):
+            api_key = _auth_ref.api_key
         return {
-            "has_active_key": bool(state.get("has_active_key")),
+            "has_active_key": bool(state.get("has_active_key") or api_key),
             "status": state.get("status", "none"),
-            "api_key": state.get("api_key"),
+            "api_key": api_key,
             "created_at": _format_unix_timestamp(state.get("created_at")),
             "expires_at": _format_unix_timestamp(state.get("expires_at")),
             "user_uuid": state.get("user_uuid"),
@@ -256,6 +260,32 @@ def api_key_status():
             "api_key": None,
             "error": str(exc),
         }
+
+
+@_api_route("/api/v1/drone/api-key/sync", methods=["POST"])
+def api_key_sync():
+    """Đồng bộ CLIENT API KEY đã được fleet server cấp (không tạo key mới)."""
+    if _auth_ref is None:
+        return {"error": "Auth client not initialized"}, 503
+    syncer = getattr(_auth_ref, "sync_api_key_from_server", None)
+    if not syncer:
+        return {"error": "API key sync not implemented"}, 501
+    try:
+        state = syncer()
+        api_key = state.get("api_key") or getattr(_auth_ref, "api_key", "")
+        if not api_key:
+            msg = "Server chưa trả API key"
+            if state.get("status") == "backend_error":
+                msg = "Fleet backend chưa sẵn sàng — lấy CLIENT API KEY từ QCloud Admin UI"
+            return {"error": msg, "status": state.get("status", "none")}, 503
+        return {
+            "api_key": api_key,
+            "status": state.get("status", "active"),
+            "expires_at": _format_unix_timestamp(state.get("expires_at")),
+            "message": "API key synced from fleet server",
+        }
+    except Exception as exc:
+        return {"error": str(exc)}, 500
 
 
 @_api_route("/api/v1/drone/api-key/request", methods=["POST"])
@@ -337,6 +367,32 @@ def api_network_priority():
             return {"success": False, "message": "4G module not available (WiFi-only build)"}, 503
 
     return {"success": True, "priority": network_controller.get_priority()}
+
+
+@_api_route("/api/network/mode", methods=["GET", "POST"])
+def api_network_mode():
+    if _cfg_ref is None:
+        return {"success": False, "message": "Config not loaded"}, 500
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        mode = str(body.get("mode", "")).strip()
+        if not mode and "priority" in body:
+            mode = network_mode.legacy_priority_to_mode(body.get("priority", ""))
+        cloud_fallback = body.get("cloud_wifi_fallback")
+        fallback_delay = body.get("fallback_delay")
+        try:
+            network_mode.apply_network_mode(
+                _cfg_ref,
+                mode,
+                cloud_fallback=cloud_fallback if cloud_fallback is not None else None,
+                fallback_delay=int(fallback_delay) if fallback_delay is not None else None,
+            )
+            return network_mode.build_network_mode_payload(_cfg_ref)
+        except ValueError as exc:
+            return {"success": False, "message": str(exc)}, 400
+        except FileNotFoundError:
+            return {"success": False, "message": "4G module not available (WiFi-only build)"}, 503
+    return network_mode.build_network_mode_payload(_cfg_ref)
 
 
 @_api_route("/api/network/reconnect", methods=["POST"])
@@ -493,6 +549,70 @@ def api_config_network_update():
     }
 
 
+@_api_route("/api/config/hardware/update", methods=["POST"])
+def api_config_hardware_update():
+    if _cfg_ref is None:
+        return {"success": False, "message": "Config not loaded"}, 500
+
+    body = request.get_json(silent=True) or {}
+    network = _cfg_ref.data.setdefault("network", {})
+    mavlink = _cfg_ref.data.setdefault("mavlink", {})
+    ethernet = _cfg_ref.data.setdefault("ethernet", {})
+    lcd = _cfg_ref.data.setdefault("lcd", {})
+
+    net_body = body.get("network", body)
+    for key in ("connection_type", "serial_port"):
+        if key in net_body:
+            network[key] = net_body[key]
+            mavlink[key] = net_body[key]
+    if "serial_baud" in net_body:
+        network["serial_baud"] = int(net_body["serial_baud"])
+        mavlink["serial_baud"] = int(net_body["serial_baud"])
+    if "local_listen_port" in net_body:
+        network["local_listen_port"] = int(net_body["local_listen_port"])
+        network["tcp_port"] = int(net_body["local_listen_port"])
+        mavlink["tcp_port"] = int(net_body["local_listen_port"])
+
+    eth_body = body.get("ethernet", body)
+    for key, cast in (
+        ("interface", str),
+        ("local_ip", str),
+        ("broadcast_ip", str),
+        ("pixhawk_ip", str),
+        ("subnet", str),
+    ):
+        if key in eth_body:
+            ethernet[key] = cast(eth_body[key])
+    for key in ("pixhawk_port", "pixhawk_connection_timeout"):
+        if key in eth_body:
+            ethernet[key] = int(eth_body[key])
+    for key in ("auto_setup", "allow_missing_pixhawk"):
+        if key in eth_body:
+            ethernet[key] = bool(eth_body[key])
+
+    lcd_body = body.get("lcd", body)
+    for key in ("enabled", "auto_setup"):
+        if key in lcd_body:
+            lcd[key] = bool(lcd_body[key])
+    for key in ("overlay", "pins", "screen"):
+        if key in lcd_body:
+            lcd[key] = str(lcd_body[key])
+    for key in ("bus", "address", "interval", "screen_hold"):
+        if key in lcd_body:
+            lcd[key] = int(lcd_body[key])
+
+    try:
+        _cfg_ref.save()
+    except Exception as exc:
+        return {"success": False, "message": f"Failed to save config: {exc}"}, 500
+
+    return {
+        "success": True,
+        "message": "Hardware config updated. Restart service for MAVLink/LCD changes.",
+        "config": _cfg_ref.data,
+    }
+
+
 @_api_route("/api/camera/detect")
 def api_camera_detect():
     refresh = request.args.get("refresh") == "1"
@@ -534,6 +654,61 @@ def api_camera_stop():
 @_api_route("/api/camera/status")
 def api_camera_status():
     return camera_handlers.camera_status()
+
+
+@_api_route("/api/camera/landing")
+def api_camera_landing():
+    max_age = float(request.args.get("max_age_sec", 10) or 10)
+    camera_id = request.args.get("camera_id")
+    if camera_id is not None and str(camera_id).strip() != "":
+        cam_id = int(camera_id)
+        entry = {"camera_id": cam_id}
+        from web.camera_service import read_landing_telemetry, read_stream_stats
+
+        landing = read_landing_telemetry(cam_id, max_age)
+        if landing:
+            entry["landing"] = landing
+        stats = read_stream_stats(cam_id, max_age)
+        if stats:
+            entry["stream_stats"] = stats
+        return {"success": True, "cameras": [entry]}
+    from web.camera_service import landing_status_for_config
+
+    return {"success": True, "cameras": landing_status_for_config(_cfg_ref, max_age)}
+
+
+@_api_route("/api/camera/apply-overlay", methods=["POST"])
+def api_camera_apply_overlay():
+    from web.camera_service import apply_camera_overlay_host
+
+    output, err = apply_camera_overlay_host()
+    if err:
+        return {
+            "success": False,
+            "message": "Không thể áp dụng overlay/reboot. Chạy: sudo bash setup_camera.sh",
+            "error": str(err),
+            "output": output,
+        }, 500
+    return {
+        "success": True,
+        "message": "Đã áp dụng boot overlay — reboot trong ~2s nếu config đổi",
+        "output": output,
+    }
+
+
+@_api_route("/api/camera/config/global", methods=["GET", "POST"])
+def api_camera_config_global():
+    from web.camera_service import camera_global_payload, save_camera_global_from_ui
+
+    if _cfg_ref is None:
+        return {"success": False, "message": "Config not loaded"}, 500
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        try:
+            save_camera_global_from_ui(_cfg_ref, body)
+        except Exception as exc:
+            return {"success": False, "message": str(exc)}, 500
+    return camera_global_payload(_cfg_ref)
 
 
 @_api_route("/api/camera/test")

@@ -1,4 +1,93 @@
-/* DroneBridge — unified shell (mọi trang con dùng chung) */
+/* DroneBridge — embed mode + theme sync */
+@import url('embed-themes.css');
+
+html.db-embed {
+    height: 100%;
+    overflow: hidden;
+}
+
+html.db-embed body {
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+html.db-embed .db-shell-header,
+html.db-embed .header,
+html.db-embed .header .back-btn,
+html.db-embed a.back-btn,
+html.db-embed .db-back-btn {
+    display: none !important;
+}
+
+html.db-embed .app-container {
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+html.db-embed .main-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+html.db-embed .content-area {
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+
+html.db-embed #app {
+    height: 100% !important;
+    min-height: 0 !important;
+    flex: 1 !important;
+}
+
+html.db-embed body.min-h-screen {
+    min-height: 0 !important;
+    height: 100% !important;
+}
+
+html.db-embed .container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1rem 1.25rem 1.5rem !important;
+    box-sizing: border-box !important;
+}
+
+html.db-embed.db-scroll {
+    overflow: auto;
+    height: 100%;
+}
+
+html.db-embed.db-scroll body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.db-page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #334155;
+    flex-wrap: wrap;
+}
+
+.db-page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+}
 
 .db-shell-header {
     display: flex;
@@ -37,13 +126,13 @@
 .db-back-btn {
     background: #3b82f6;
     border: none;
-    color: #ffffff !important;
+    color: #ffffff;
     padding: 0.55rem 1rem;
     border-radius: 0.5rem;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
-    text-decoration: none !important;
+    text-decoration: none;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -54,29 +143,7 @@
     line-height: 1.2;
 }
 
-.db-back-btn:hover,
-.db-back-btn:visited,
-.db-back-btn:active {
+.db-back-btn:hover {
     background: #2563eb;
-    color: #ffffff !important;
-    text-decoration: none !important;
-}
-
-/* Legacy alias — trang cũ dùng db-page-header */
-.db-page-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #334155;
-    flex-wrap: wrap;
-}
-
-.db-page-header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #f1f5f9;
-    font-family: 'Inter', sans-serif;
+    color: #ffffff;
 }

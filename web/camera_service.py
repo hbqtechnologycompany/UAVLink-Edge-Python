@@ -610,3 +610,110 @@ def camera_config_save(cfg, incoming: dict, restart: bool = False) -> tuple:
         "config": camera_config_to_ui(cfg, cam_id),
         "path": str(project_path("config.yaml")),
     }, 200
+
+
+def _temp_json_path(name: str) -> Path:
+    return Path("/tmp") / name
+
+
+def read_landing_telemetry(camera_id: int, max_age_sec: float = 10.0) -> Optional[dict]:
+    path = _temp_json_path(f"camera_landing_{camera_id}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    updated_at = float(data.get("updated_at", 0) or 0)
+    if updated_at > 0:
+        age = time.time() - updated_at
+        data["age_sec"] = age
+        if max_age_sec > 0 and age > max_age_sec:
+            return None
+    return data
+
+
+def read_stream_stats(camera_id: int, max_age_sec: float = 10.0) -> Optional[dict]:
+    path = _temp_json_path(f"camera_stream_stats_{camera_id}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    updated_at = float(data.get("updated_at", 0) or 0)
+    if updated_at > 0:
+        age = time.time() - updated_at
+        data["age_sec"] = age
+        if max_age_sec > 0 and age > max_age_sec:
+            return None
+    if float(data.get("fps_window", 0) or 0) < 0.5:
+        return None
+    return data
+
+
+def landing_status_for_config(cfg, max_age_sec: float = 10.0) -> List[dict]:
+    _ensure_default_streams(cfg)
+    out = []
+    for stream in cfg.camera.get("streams", []):
+        if not stream.get("enabled", True):
+            continue
+        cam_id = int(stream.get("camera_id", 0))
+        entry = {"camera_id": cam_id, "name": stream.get("name", f"cam{cam_id}")}
+        landing = read_landing_telemetry(cam_id, max_age_sec)
+        if landing:
+            entry["landing"] = landing
+        stats = read_stream_stats(cam_id, max_age_sec)
+        if stats:
+            entry["stream_stats"] = stats
+        out.append(entry)
+    return out
+
+
+def camera_global_payload(cfg) -> dict:
+    camera = cfg.camera if cfg else {}
+    return {
+        "success": True,
+        "primary_camera_id": int(camera.get("primary_camera_id", 0)),
+        "auto_memory_profile": bool(camera.get("auto_memory_profile", True)),
+        "memory_tier_gb": _detect_memory_tier_gb(),
+    }
+
+
+def save_camera_global_from_ui(cfg, incoming: dict) -> None:
+    camera = cfg.data.setdefault("camera", {})
+    if "primary_camera_id" in incoming:
+        camera["primary_camera_id"] = int(incoming["primary_camera_id"])
+    if "auto_memory_profile" in incoming:
+        camera["auto_memory_profile"] = bool(incoming["auto_memory_profile"])
+    cfg.save()
+
+
+def _detect_memory_tier_gb() -> int:
+    try:
+        mem_kb = int(Path("/proc/meminfo").read_text(encoding="utf-8").split()[1])
+        mem_gb = mem_kb / (1024 * 1024)
+        if mem_gb <= 2.5:
+            return 2
+        if mem_gb <= 5.0:
+            return 4
+        return 8
+    except Exception:
+        return 4
+
+
+def apply_camera_overlay_host() -> tuple:
+    script = project_path("setup_camera.sh")
+    if not script.exists():
+        return "", FileNotFoundError("setup_camera.sh not found")
+    result = subprocess.run(
+        ["sudo", "-n", "bash", str(script)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        cwd=str(project_path()),
+    )
+    output = (result.stdout or "") + (result.stderr or "")
+    if result.returncode != 0:
+        return output, RuntimeError(result.stderr or result.stdout or "overlay apply failed")
+    return output, None

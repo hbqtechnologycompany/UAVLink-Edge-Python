@@ -6,6 +6,8 @@
     <title>SecureToken Manager - UAVLink-Edge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="common-nav.css" rel="stylesheet">
+    <script src="common-nav.js"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -41,7 +43,11 @@
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 font-sans antialiased overflow-hidden min-h-screen">
-    <div id="app" class="min-h-screen flex flex-col md:flex-row">
+    <header class="db-shell-header">
+        <a href="/dashboard.html" class="db-back-btn">← Về Dashboard</a>
+        <h1 class="db-shell-title">🔐 SecureToken Manager</h1>
+    </header>
+    <div id="app" class="flex flex-col md:flex-row" style="height:calc(100vh - 52px);">
         <!-- Sidebar Navigation -->
         <aside class="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 z-20">
             <div class="p-6 border-b border-slate-800 flex items-center gap-3">
@@ -63,10 +69,6 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
                     <span class="font-medium text-sm">Lịch sử (Audit Log)</span>
                 </button>
-                <a href="/dashboard.html" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-                    <span class="font-medium text-sm">← Back to Dashboard</span>
-                </a>
             </div>
 
             <div class="p-4 border-t border-slate-800 bg-slate-900/50">
@@ -101,7 +103,7 @@
                     <div id="view-dashboard">
                         <div class="flex justify-between items-end mb-2">
                             <p class="text-slate-400 text-sm">
-                                Quản lý các token đang hoạt động. Bạn có thể điều chỉnh thời hạn hoặc hủy quyền truy cập bất cứ lúc nào.
+                                Mỗi drone chỉ có <strong class="text-slate-300">một API key</strong> tại một thời điểm. Hủy key cũ trước khi tạo key mới.
                             </p>
                         </div>
                         <div id="active-tokens-container" class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
@@ -220,50 +222,120 @@
         </div>
     </div>
 
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-[60] px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-sm text-slate-100 shadow-xl"></div>
+
     <script>
-        // --- State ---
+        const API = {
+            status: '/api/v1/drone/api-key/status',
+            request: '/api/v1/drone/api-key/request',
+            revoke: '/api/v1/drone/api-key/revoke',
+            delete: '/api/v1/drone/api-key/delete',
+        };
+        const HISTORY_KEY = 'db-token-history';
+
         let tokens = [];
         let currentView = 'dashboard';
         let adjustingTokenId = null;
         let visibleTokens = new Set();
+        let historyTokens = [];
 
-        // --- API-backed token state (fleet server single active key) ---
-        async function refreshTokensFromServer() {
+        function loadHistory() {
             try {
-                const resp = await fetch('/api/v1/drone/api-key/status');
-                const data = await resp.json();
+                historyTokens = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            } catch (e) {
+                historyTokens = [];
+            }
+        }
+
+        function saveHistory() {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(historyTokens.slice(0, 50)));
+        }
+
+        function pushHistory(entry) {
+            historyTokens.unshift(entry);
+            saveHistory();
+        }
+
+        function showToast(msg, isError) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.className = 'fixed bottom-6 right-6 z-[60] px-4 py-2.5 rounded-lg text-sm shadow-xl border ' +
+                (isError ? 'bg-red-950 border-red-800 text-red-200' : 'bg-slate-800 border-slate-700 text-slate-100');
+            el.classList.remove('hidden');
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => el.classList.add('hidden'), 2500);
+        }
+
+        function apiStatusToToken(data) {
+            if (!data || !data.has_active_key || !data.api_key) return null;
+            const connected = data.status === 'connected';
+            return {
+                id: 'current',
+                tokenKey: data.api_key,
+                createdAt: data.created_at || new Date().toISOString(),
+                expiresAt: data.expires_at || new Date().toISOString(),
+                status: 'active',
+                lastState: connected ? 'connected' : 'pending',
+                connectedUser: data.username || (connected && data.user_uuid ? data.user_uuid.substring(0, 8) + '…' : null),
+            };
+        }
+
+        async function fetchTokenStatus() {
+            const res = await fetch(API.status, { cache: 'no-store' });
+            const data = await res.json();
+            if (!res.ok && !data) throw new Error('Không lấy được trạng thái token');
+            return data;
+        }
+
+        async function loadTokens() {
+            try {
+                const data = await fetchTokenStatus();
+                const current = apiStatusToToken(data);
+                tokens = current ? [current] : [];
+                updateCreateButton();
+            } catch (e) {
+                console.error(e);
+                showToast('Lỗi tải token: ' + e.message, true);
                 tokens = [];
-                if (data.has_active_key && data.api_key) {
-                    const status = (data.status || 'active').toLowerCase();
-                    tokens.push({
-                        id: 'current',
-                        tokenKey: data.api_key,
-                        createdAt: data.created_at || new Date().toISOString(),
-                        expiresAt: data.expires_at || new Date().toISOString(),
-                        status: status === 'expired' || status === 'revoked' ? status : 'active',
-                        lastState: status,
-                        connectedUser: data.username || data.user_uuid || null,
-                    });
-                }
-            } catch (err) {
-                console.error('Failed to load API key status', err);
             }
             renderView();
         }
 
-        // --- Helpers ---
-        function generateTokenString() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            const prefix = 'sk_live_';
-            let result = '';
-            for (let i = 0; i < 24; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
+        function updateCreateButton() {
+            const btn = document.getElementById('create-btn');
+            if (!btn) return;
+            const span = btn.querySelector('span');
+            if (getActiveTokens().length > 0) {
+                if (span) span.textContent = 'Thay API Key';
+                btn.title = 'Hủy key hiện tại và tạo key mới';
+            } else {
+                if (span) span.textContent = 'Create API Key';
+                btn.title = 'Tạo API key mới';
             }
-            return prefix + result;
         }
 
-        function generateId() {
-            return Math.random().toString(36).substr(2, 9);
+        function parseApiError(data, fallback) {
+            const msg = (data && data.error) ? String(data.error) : fallback;
+            if (/0x01|already has an active|active API key/i.test(msg)) {
+                return 'Đã có API key đang hoạt động — hãy hủy key cũ trước khi tạo mới';
+            }
+            if (/0x05/i.test(msg)) {
+                return 'Server từ chối tạo key (có thể key cũ vẫn còn) — thử Hủy key rồi tạo lại';
+            }
+            return msg;
+        }
+
+        async function revokeCurrentKey() {
+            const res = await fetch(API.revoke, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(parseApiError(data, 'Hủy token thất bại'));
+            return data;
+        }
+
+        // --- Helpers ---
+        function maskKey(key) {
+            if (!key || key.length <= 6) return '••••••';
+            return key.substring(0, 4) + '••••••••' + key.substring(key.length - 2);
         }
 
         function formatDate(isoString) {
@@ -299,8 +371,8 @@
         }
 
         function getHistoryTokens() {
-            return tokens
-                .filter(t => t.status !== 'active' || new Date(t.expiresAt).getTime() <= Date.now())
+            return historyTokens
+                .slice()
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         }
 
@@ -382,7 +454,7 @@
             
             activeTokens.forEach(token => {
                 const isVisible = visibleTokens.has(token.id);
-                const displayKey = isVisible ? token.tokenKey : 'sk_live_••••••••••••••••••••••••';
+                const displayKey = isVisible ? token.tokenKey : maskKey(token.tokenKey);
                 
                 html += `
                     <tr class="group hover:bg-slate-800/20 transition-colors">
@@ -546,11 +618,36 @@
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
-            // Could add a toast notification here
+            if (!text || text.includes('•')) {
+                showToast('Bấm icon mắt để hiện token trước khi copy', true);
+                return;
+            }
+            const done = () => showToast('Đã copy token');
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(done).catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
+            function fallbackCopy() {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;left:-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    done();
+                } catch (e) {
+                    showToast('Không copy được — chọn và copy thủ công', true);
+                }
+                document.body.removeChild(ta);
+            }
         }
 
         function openCreateModal() {
+            if (getActiveTokens().length > 0) {
+                if (!confirm('Drone chỉ có 1 API key. Tạo key mới sẽ HỦY key hiện tại trước. Tiếp tục?')) return;
+            }
             document.getElementById('create-modal').classList.remove('hidden');
             document.getElementById('create-days').value = 1;
             document.getElementById('create-hours').value = 0;
@@ -563,62 +660,77 @@
         async function handleCreateToken() {
             const days = parseInt(document.getElementById('create-days').value) || 0;
             const hours = parseInt(document.getElementById('create-hours').value) || 0;
-            
             const totalMinutes = days * 24 * 60 + hours * 60;
             if (totalMinutes < 60 || days > 30) {
-                alert("Thời gian không hợp lệ! Tối thiểu 1 giờ, tối đa 30 ngày.");
+                showToast('Thời gian không hợp lệ! Tối thiểu 1 giờ, tối đa 30 ngày.', true);
                 return;
             }
+            const expirationHours = Math.max(1, Math.min(720, days * 24 + hours));
 
-            const expiration_hours = Math.max(1, Math.min(720, days * 24 + hours));
             try {
-                const resp = await fetch('/api/v1/drone/api-key/request', {
+                const status = await fetchTokenStatus();
+                if (status.has_active_key && status.api_key) {
+                    const old = tokens.find(t => t.id === 'current');
+                    await revokeCurrentKey();
+                    if (old) {
+                        pushHistory({
+                            id: 'revoked-' + Date.now(),
+                            tokenKey: old.tokenKey,
+                            createdAt: old.createdAt,
+                            expiresAt: new Date().toISOString(),
+                            status: 'revoked',
+                            connectedUser: old.connectedUser,
+                        });
+                    }
+                    await new Promise(r => setTimeout(r, 300));
+                }
+
+                const res = await fetch(API.request, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ expiration_hours }),
+                    body: JSON.stringify({ expiration_hours: expirationHours }),
                 });
-                const data = await resp.json();
-                if (!resp.ok) {
-                    alert(data.error || 'Không tạo được API key');
+                const data = await res.json();
+                if (!res.ok) {
+                    showToast(parseApiError(data, 'Tạo token thất bại'), true);
+                    await loadTokens();
                     return;
                 }
                 closeCreateModal();
-                await refreshTokensFromServer();
-            } catch (err) {
-                alert('Lỗi kết nối server: ' + err.message);
+                visibleTokens.add('current');
+                showToast('Đã tạo API key mới');
+                await loadTokens();
+            } catch (e) {
+                showToast('Lỗi: ' + e.message, true);
+                await loadTokens();
             }
         }
 
         async function handleRevoke(id) {
             if (!confirm('Bạn có chắc chắn muốn hủy token này không? Hành động này không thể hoàn tác.')) return;
+            const token = tokens.find(t => t.id === id);
             try {
-                const resp = await fetch('/api/v1/drone/api-key/revoke', { method: 'DELETE' });
-                const data = await resp.json();
-                if (!resp.ok) {
-                    alert(data.error || 'Không revoke được API key');
-                    return;
+                await revokeCurrentKey();
+                if (token) {
+                    pushHistory({
+                        id: token.id + '-' + Date.now(),
+                        tokenKey: token.tokenKey,
+                        createdAt: token.createdAt,
+                        expiresAt: new Date().toISOString(),
+                        status: 'revoked',
+                        connectedUser: token.connectedUser,
+                    });
                 }
-                await refreshTokensFromServer();
-            } catch (err) {
-                alert('Lỗi kết nối server: ' + err.message);
+                visibleTokens.delete(id);
+                showToast('Đã hủy token');
+                await loadTokens();
+            } catch (e) {
+                showToast('Lỗi: ' + e.message, true);
             }
         }
 
         function openAdjustModal(id) {
-            adjustingTokenId = id;
-            const token = tokens.find(t => t.id === id);
-            if (!token) return;
-            
-            document.getElementById('adjust-token-preview').textContent = token.tokenKey.substring(0, 12) + '...';
-            document.getElementById('current-expiry-text').textContent = 'Hiện tại: ' + formatDate(token.expiresAt);
-            
-            // Convert current expiry to datetime-local format
-            const date = new Date(token.expiresAt);
-            const offset = date.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
-            document.getElementById('new-expiry-date').value = localISOTime;
-            
-            document.getElementById('adjust-modal').classList.remove('hidden');
+            showToast('Điều chỉnh hạn: hủy token hiện tại rồi tạo key mới với thời hạn mong muốn.', true);
         }
 
         function closeAdjustModal() {
@@ -647,26 +759,11 @@
             renderView();
         }
 
-        // --- Auto-expire check ---
-        function checkExpiredTokens() {
-            let changed = false;
-            tokens.forEach(t => {
-                if (t.status === 'active' && new Date(t.expiresAt).getTime() < Date.now()) {
-                    t.status = 'expired';
-                    changed = true;
-                }
-            });
-            if (changed) {
-                renderView();
-            }
-        }
-
-        // --- Initialize ---
         function init() {
+            loadHistory();
+            loadTokens();
             setView('dashboard');
-            refreshTokensFromServer();
-            setInterval(checkExpiredTokens, 60000);
-            setInterval(refreshTokensFromServer, 30000);
+            setInterval(loadTokens, 15000);
         }
 
         init();

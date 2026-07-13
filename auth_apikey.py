@@ -12,6 +12,19 @@ MSG_API_KEY_DELETE = 0x26
 MSG_API_KEY_DELETE_ACK = 0x27
 RESULT_SUCCESS = 0x00
 
+# Router → edge error codes (API key management)
+API_KEY_ERRORS = {
+  0x01: "drone already has an active API key",
+  0x02: "invalid session token",
+  0x03: "invalid expiration hours",
+  0x04: "drone not found",
+  0x05: "fleet backend unavailable at POST /drones/{uuid}/request-api-key",
+}
+
+
+def api_key_error_message(error_code: int) -> str:
+  return API_KEY_ERRORS.get(error_code, f"unknown error (0x{error_code:02x})")
+
 
 @dataclass
 class APIKeyResponse:

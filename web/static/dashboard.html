@@ -1,350 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi" data-theme="light" data-font="md">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UAVLink-Edge Dashboard</title>
+    <title>UAVLink-Edge — Control Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #1e293b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --accent-blue: #3b82f6;
-            --accent-green: #22c55e;
-            --accent-red: #ef4444;
-            --accent-yellow: #eab308;
-            --accent-purple: #8b5cf6;
-            --accent-cyan: #06b6d4;
-            --border: #334155;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, var(--bg-primary) 0%, #0c1222 100%);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .container {
-            max-width: 900px;
-            width: 100%;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .logo {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .card {
-            background: var(--bg-card);
-            border-radius: 1rem;
-            padding: 2rem;
-            border: 1px solid var(--border);
-            text-decoration: none;
-            color: inherit;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: var(--accent-blue);
-        }
-
-        .card:hover::before {
-            opacity: 1;
-        }
-
-        .card-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .card-desc {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .card-mavlink .card-icon { color: var(--accent-green); }
-        .card-mavlink:hover { border-color: var(--accent-green); }
-        .card-mavlink::before { background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan)); }
-
-        .card-params .card-icon { color: var(--accent-purple); }
-        .card-params:hover { border-color: var(--accent-purple); }
-        .card-params::before { background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue)); }
-
-        .card-tokens .card-icon { color: var(--accent-cyan); }
-        .card-tokens:hover { border-color: var(--accent-cyan); }
-        .card-tokens::before { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue)); }
-
-        .card-settings .card-icon { color: var(--accent-yellow); }
-        .card-settings:hover { border-color: var(--accent-yellow); }
-        .card-settings::before { background: linear-gradient(90deg, var(--accent-yellow), var(--accent-red)); }
-
-        .card-connection .card-icon { color: var(--accent-cyan); }
-        .card-connection:hover { border-color: var(--accent-cyan); }
-        .card-connection::before { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); }
-
-        .status-bar {
-            background: var(--bg-card);
-            border-radius: 0.75rem;
-            padding: 1rem 1.5rem;
-            border: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .status-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .status-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 500;
-        }
-
-        .status-ok { color: var(--accent-green); }
-        .status-err { color: var(--accent-red); }
-        .status-warn { color: var(--accent-yellow); }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .dot-green { background: var(--accent-green); }
-        .dot-red { background: var(--accent-red); }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 2rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .footer a {
-            color: var(--accent-blue);
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <link href="app-shell.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">🚁</div>
-            <h1>UAVLink-Edge</h1>
-            <p class="subtitle">MAVLink Communication & Parameter Management</p>
-        </div>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-        <div class="cards">
-            <a href="mavlink.html" class="card card-mavlink">
-                <div class="card-icon">📡</div>
-                <div class="card-title">MAVLink Dashboard</div>
-                <div class="card-desc">
-                    Monitor MAVLink packet statistics, authentication status, IP changes, and live logs in real-time.
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
                 </div>
-            </a>
-
-            <a href="params.html" class="card card-params">
-                <div class="card-icon">⚙️</div>
-                <div class="card-title">Parameter Editor</div>
-                <div class="card-desc">
-                    Browse, search, and modify PX4 flight controller parameters with a QGroundControl-style interface.
+                <div class="sidebar-brand-text">
+                    <h1>UAVLink-Edge</h1>
+                    <span data-i18n="brandSub">PX4 Control Center</span>
                 </div>
-            </a>
+            </div>
 
-            <a href="tokens.html" class="card card-tokens">
-                <div class="card-icon">🔐</div>
-                <div class="card-title">SecureToken Manager</div>
-                <div class="card-desc">
-                    Manage API tokens, create time-limited keys, and monitor connection sessions with full audit logging.
+            <nav class="sidebar-nav" id="sidebar-nav"></nav>
+
+            <div class="sidebar-footer">
+                <button class="sidebar-toggle" id="sidebar-toggle" type="button" data-i18n-title="collapse">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    <span data-i18n="collapse">Collapse</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="app-main">
+            <div class="status-strip">
+                <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+
+                <div class="status-pills">
+                    <div class="status-pill ok" id="pill-system">
+                        <span class="status-dot ok"></span>
+                        <span class="label" data-i18n="status.system">System</span>
+                        <span class="value">—</span>
+                    </div>
+                    <div class="status-pill" id="pill-px4">
+                        <span class="status-dot"></span>
+                        <span class="label" data-i18n="status.px4">PX4</span>
+                        <span class="value">—</span>
+                    </div>
+                    <div class="status-pill" id="pill-auth">
+                        <span class="status-dot"></span>
+                        <span class="label" data-i18n="status.auth">Auth</span>
+                        <span class="value">—</span>
+                    </div>
+                    <div class="status-pill" id="pill-network">
+                        <span class="label" data-i18n="status.network">Network</span>
+                        <span class="value">—</span>
+                    </div>
+                    <div class="status-pill" id="pill-mavlink">
+                        <span class="label" data-i18n="status.mavlink">MAVLink</span>
+                        <span class="value">—</span>
+                    </div>
+                    <div class="status-pill" id="pill-ip">
+                        <span class="label" data-i18n="status.ip">IP</span>
+                        <span class="value">—</span>
+                    </div>
+                    <div class="status-pill" id="pill-uptime">
+                        <span class="label" data-i18n="status.uptime">Uptime</span>
+                        <span class="value">—</span>
+                    </div>
                 </div>
-            </a>
+            </div>
 
- 
+            <div class="content-body">
+                <div class="panel-settings" id="panel-settings">
+                    <h2 class="settings-page-title" data-i18n="settings.title">Cài đặt</h2>
+                    <p class="settings-page-desc" data-i18n="settings.desc">Tùy chỉnh giao diện và ngôn ngữ hệ thống</p>
 
-            <a href="settings.html" class="card card-settings">
-                <div class="card-icon">🛠️</div>
-                <div class="card-title">Cài đặt cơ bản</div>
-                <div class="card-desc">
-                    Cấu hình và kiểm tra các thiết bị: Motor, FailSafe, GPS, và các chức năng điều khiển cơ bản.
+                    <section class="settings-section">
+                        <h3 class="settings-section-title" data-i18n="settings.appearance">Giao diện</h3>
+                        <div class="settings-card">
+                            <p class="settings-hint" data-i18n="settings.themeHint">Chọn bảng màu cho toàn bộ dashboard</p>
+                            <div class="theme-grid" id="theme-grid"></div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3 class="settings-section-title" data-i18n="settings.fontSize">Cỡ chữ</h3>
+                        <div class="settings-card">
+                            <div class="segmented" id="font-size-row">
+                                <button type="button" class="option-btn" data-font="sm" data-i18n="settings.fontSm">Nhỏ</button>
+                                <button type="button" class="option-btn active" data-font="md" data-i18n="settings.fontMd">Vừa</button>
+                                <button type="button" class="option-btn" data-font="lg" data-i18n="settings.fontLg">Lớn</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3 class="settings-section-title" data-i18n="language">Ngôn ngữ</h3>
+                        <div class="settings-card">
+                            <div class="segmented" id="lang-row">
+                                <button type="button" class="option-btn active" id="lang-vi">Tiếng Việt</button>
+                                <button type="button" class="option-btn" id="lang-en">English</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3 class="settings-section-title" data-i18n="settings.system">Hệ thống</h3>
+                        <div class="settings-card settings-info">
+                            <p><strong>UAVLink-Edge</strong> — PX4 Control Center</p>
+                            <p data-i18n="settings.systemHint">Cài đặt phần cứng (camera, motor, GPS…) nằm tại menu <strong>Thiết bị → Cài đặt phần cứng</strong>.</p>
+                        </div>
+                    </section>
                 </div>
-            </a>
 
-            <a href="mavlink_settings.html" class="card card-mavlink-settings">
-                <div class="card-icon">🔌</div>
-                <div class="card-title">MAVLink Connection</div>
-                <div class="card-desc">
-                    Chọn cách kết nối với Pixhawk: qua Ethernet (UDP) hoặc Serial (USB/UART). Cấu hình port và baud rate.
+                <div class="panel-frame" id="panel-frame">
+                    <div id="frame-container"></div>
                 </div>
-            </a>
-
-            <a href="connect.html" class="card card-connection">
-                <div class="card-icon">📡</div>
-                <div class="card-title">Connection Settings</div>
-                <div class="card-desc">
-                    Cấu hình ưu tiên WiFi/4G, theo dõi mức độ kết nối server và tốc độ mạng real-time.
-                </div>
-            </a>
-        </div>
-
-        <div class="status-bar"> 
-            <div class="status-item">
-                <div id="connection-dot" class="dot dot-green"></div>
-                <span class="status-label">System:</span>
-                <span id="connection-status" class="status-value status-ok">Connected</span>
             </div>
-            <div class="status-item">
-                <span class="status-label">Auth:</span>
-                <span id="auth-status" class="status-value status-ok">Loading...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">IP:</span>
-                <span id="current-ip" class="status-value">Loading...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Network:</span>
-                <span id="network-type" class="status-value">Loading...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Speed:</span>
-                <span id="network-speed" class="status-value">Loading...</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Uptime:</span>
-                <span id="uptime" class="status-value">Loading...</span>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>UAVLink-Edge v1.0 • Built for PX4 Autopilot</p>
-        </div>
+        </main>
     </div>
 
-    <script>
-        function updateStatus() {
-            fetch('/api/status')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('connection-status').textContent = 'Connected';
-                    document.getElementById('connection-status').className = 'status-value status-ok';
-                    document.getElementById('connection-dot').className = 'dot dot-green';
-
-                    document.getElementById('current-ip').textContent = data.current_ip || 'N/A';
-                    
-                    const authStatus = document.getElementById('auth-status');
-                    authStatus.textContent = data.auth_status;
-                    authStatus.className = 'status-value ' + (data.auth_status === 'Authenticated' ? 'status-ok' : 'status-err');
-                    
-                    document.getElementById('uptime').textContent = data.uptime ? data.uptime.split('.')[0] + 's' : 'N/A';
-                    
-                    // Update network info
-                    const networkType = document.getElementById('network-type');
-                    const networkTypeStr = data.network_type || 'Unknown';
-                    networkType.textContent = networkTypeStr;
-                    
-                    // Color code network type
-                    if (networkTypeStr === 'WiFi') {
-                        networkType.className = 'status-value status-ok';
-                    } else if (networkTypeStr === '4G/LTE') {
-                        networkType.className = 'status-value status-warn';
-                    } else if (networkTypeStr === 'Ethernet') {
-                        networkType.className = 'status-value status-ok';
-                    } else {
-                        networkType.className = 'status-value status-err';
-                    }
-                    
-                    document.getElementById('network-speed').textContent = data.network_speed || 'N/A';
-                })
-                .catch(err => {
-                    document.getElementById('connection-status').textContent = 'Disconnected';
-                    document.getElementById('connection-status').className = 'status-value status-err';
-                    document.getElementById('connection-dot').className = 'dot dot-red';
-                });
-        }
-
-        setInterval(updateStatus, 2000);
-        updateStatus();
-    </script>
+    <script src="app-shell.js"></script>
 </body>
 </html>

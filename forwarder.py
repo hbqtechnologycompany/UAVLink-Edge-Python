@@ -14,6 +14,19 @@ from mavlink_utils import (
     is_pixhawk_heartbeat,
     normalize_connection_type,
 )
+from mavlink_custom import (
+    COMP_ONBOARD,
+    COMPANION_SYS_ID,
+    GPS_DIAG_NO_PX4_STREAM,
+    GPS_DIAG_PX4_LOCAL_ONLY,
+    GPS_DIAG_PX4_NO_FIX,
+    GPS_DIAG_PX4_OK,
+    build_dronebridge_status_frame,
+    build_session_heartbeat_frame,
+    build_session_heartbeat_frame_shifted,
+    forward_gps_raw_int,
+    session_hb_mode,
+)
 from metrics import global_metrics
 from network_utils import detect_network_info, get_local_ip
 from telemetry import global_telemetry
@@ -67,10 +80,38 @@ class Forwarder:
         self._rate_out_server = 0
         self._rate_bytes_out = 0
 
+        self._gps_last_at: Optional[datetime] = None
+        self._gps_fix_type = 0
+        self._gps_satellites = 0
+        self._local_pos_last_at: Optional[datetime] = None
+        self._hb_seq = 0
+        self._companion_seq = 0
+        self._mavlink_ka_seq = 0
+
     def _fallback_timeout_sec(self) -> float:
         timeout = self.ethernet.get("pixhawk_connection_timeout", 30)
         sec = max(3, int(timeout) // 2)
         return float(sec)
+
+    def _listen_port(self) -> int:
+        return int(self.network.get("local_listen_port") or self.network.get("tcp_port") or 14550)
+
+    def _ethernet_udpin_spec(self) -> str:
+        """Bind fixed UDP on ethernet.local_ip (PX4 sends unicast to CM5 IP:port)."""
+        port = self._listen_port()
+        local_ip = str(self.ethernet.get("local_ip") or "").strip()
+        if local_ip:
+            return f"udpin:{local_ip}:{port}"
+        return f"udpin:0.0.0.0:{port}"
+
+    def _pixhawk_udp_target(self) -> Optional[Tuple[str, int]]:
+        pixhawk_ip = str(self.ethernet.get("pixhawk_ip") or "").strip()
+        if not pixhawk_ip:
+            return None
+        port = int(self.ethernet.get("pixhawk_port") or 0)
+        if port <= 0:
+            port = self._listen_port()
+        return pixhawk_ip, port
 
     def _create_connection(self, path: str):
         if path == MAVLINK_PATH_SERIAL:
@@ -88,8 +129,9 @@ class Forwarder:
             logger.info("[MAVLINK] Connecting to Pixhawk via TCP: %s:%s", self.tcp_host, self.tcp_port)
             return mavutil.mavlink_connection(f"tcp:{self.tcp_host}:{self.tcp_port}")
 
-        logger.info("[MAVLINK] Running with UDP Server only on 0.0.0.0:%s", self.tcp_port)
-        return mavutil.mavlink_connection(f"udpin:0.0.0.0:{self.tcp_port}")
+        spec = self._ethernet_udpin_spec()
+        logger.info("[MAVLINK] Pixhawk UDP listener %s (fixed port for ETH partner)", spec)
+        return mavutil.mavlink_connection(spec)
 
     def start_listener(self) -> bool:
         paths = []
@@ -151,6 +193,21 @@ class Forwarder:
 
         threading.Thread(target=self._downlink_loop, daemon=True, name="forwarder-downlink").start()
         threading.Thread(target=self._heartbeat_loop, daemon=True, name="forwarder-heartbeat").start()
+        auth_cfg = getattr(self.config, "auth", {}) or {}
+        if float(auth_cfg.get("session_heartbeat_frequency", 1.0) or 0) > 0:
+            threading.Thread(
+                target=self._mavlink_keepalive_loop,
+                daemon=True,
+                name="forwarder-mavlink-ka",
+            ).start()
+        threading.Thread(
+            target=self._companion_status_loop,
+            daemon=True,
+            name="forwarder-companion-status",
+        ).start()
+        if not forward_gps_raw_int(self.network):
+            logger.info("[MAVLINK] GPS_RAW_INT uplink OFF — server uses EKF/global position only")
+        self._start_partner_heartbeat()
         threading.Thread(target=self._path_watchdog_loop, daemon=True, name="forwarder-path-watchdog").start()
         threading.Thread(target=self._ip_monitor_loop, daemon=True, name="forwarder-ip-monitor").start()
         threading.Thread(target=self._rate_reporter_loop, daemon=True, name="forwarder-rate-reporter").start()
@@ -246,6 +303,13 @@ class Forwarder:
         if msg_type in ("HEARTBEAT", "VFR_HUD", "GLOBAL_POSITION_INT", "GPS_RAW_INT", "SYS_STATUS"):
             global_telemetry.feed(msg)
 
+        if msg_type == "GPS_RAW_INT":
+            self._gps_last_at = datetime.now(timezone.utc)
+            self._gps_fix_type = int(getattr(msg, "fix_type", 0) or 0)
+            self._gps_satellites = int(getattr(msg, "satellites_visible", 0) or 0)
+        elif msg_type == "LOCAL_POSITION_NED":
+            self._local_pos_last_at = datetime.now(timezone.utc)
+
         if msg_type == "HEARTBEAT":
             if not is_pixhawk_heartbeat(msg):
                 logger.debug(
@@ -299,6 +363,9 @@ class Forwarder:
             global_metrics.inc_failed_unhealthy(msg_type)
             return
 
+        if msg_type == "GPS_RAW_INT" and not forward_gps_raw_int(self.network):
+            return
+
         try:
             buf = msg.get_msgbuf()
             self.server_sock.sendto(buf, self.target_addr)
@@ -340,6 +407,137 @@ class Forwarder:
             except Exception:
                 pass
             time.sleep(0.01)
+
+    def _start_partner_heartbeat(self) -> None:
+        target = self._pixhawk_udp_target()
+        conn = self._connections.get(MAVLINK_PATH_ETHERNET)
+        if not target or conn is None or not hasattr(conn, "port"):
+            if target and conn is None:
+                logger.warning("[PARTNER_HB] No ethernet MAVLink listener — partner heartbeat skipped")
+            return
+        threading.Thread(
+            target=self._partner_heartbeat_loop,
+            args=(conn.port, target[0], target[1]),
+            daemon=True,
+            name="partner-heartbeat",
+        ).start()
+
+    def _partner_heartbeat_loop(self, sock: socket.socket, pixhawk_ip: str, pixhawk_port: int) -> None:
+        """Share pymavlink UDP socket — PX4 unicast goes to same bind as listener (Pi pixhawk_udp.go)."""
+        from pymavlink import mavutil as pm
+
+        mav = pm.mavlink.MAVLink(None, srcSystem=255, srcComponent=190)
+        target = (pixhawk_ip, pixhawk_port)
+        sent = 0
+        first = False
+        last_log = time.time()
+        logger.info("[PARTNER_HB] HEARTBEAT 1 Hz via %s → %s:%d", sock.getsockname(), pixhawk_ip, pixhawk_port)
+        while self.running:
+            try:
+                msg = mav.heartbeat_encode(
+                    type=pm.mavlink.MAV_TYPE_GCS,
+                    autopilot=pm.mavlink.MAV_AUTOPILOT_INVALID,
+                    base_mode=0,
+                    custom_mode=0,
+                    system_status=pm.mavlink.MAV_STATE_ACTIVE,
+                )
+                sock.sendto(msg.pack(mav), target)
+                sent += 1
+                if not first:
+                    logger.info("[PARTNER_HB] ✓ First HEARTBEAT sent → %s:%d", pixhawk_ip, pixhawk_port)
+                    first = True
+                elif time.time() - last_log >= 60:
+                    logger.info("[PARTNER_HB] active → %s:%d (sent %d)", pixhawk_ip, pixhawk_port, sent)
+                    last_log = time.time()
+            except OSError as exc:
+                logger.error("[PARTNER_HB] send failed: %s", exc)
+            time.sleep(1)
+
+    def _gps_diagnosis(self) -> tuple:
+        now = datetime.now(timezone.utc)
+        stale_after = 5.0
+        if self._gps_last_at and (now - self._gps_last_at).total_seconds() <= stale_after:
+            if self._gps_fix_type >= 3 and self._gps_satellites > 0:
+                return self._gps_fix_type, self._gps_satellites, 1, GPS_DIAG_PX4_OK
+            return self._gps_fix_type, self._gps_satellites, 1, GPS_DIAG_PX4_NO_FIX
+        if self._local_pos_last_at and (now - self._local_pos_last_at).total_seconds() <= stale_after:
+            return 255, 0, 0, GPS_DIAG_PX4_LOCAL_ONLY
+        return 255, 0, 0, GPS_DIAG_NO_PX4_STREAM
+
+    def _camera_live_flags(self) -> tuple:
+        try:
+            from web.camera_service import read_stream_stats
+
+            cam0 = 1 if read_stream_stats(0, 5.0) else 0
+            cam1 = 1 if read_stream_stats(1, 5.0) else 0
+            return cam0, cam1
+        except Exception:
+            return 0, 0
+
+    def _mavlink_keepalive_loop(self) -> None:
+        auth_cfg = getattr(self.config, "auth", {}) or {}
+        interval = float(auth_cfg.get("session_heartbeat_frequency", 1.0) or 1.0)
+        if interval <= 0:
+            return
+        hb_mode = session_hb_mode()
+        sequence = 0
+        sys_id = self._pixhawk_sys_id or 1
+        while self.running:
+            token = self.auth_client.session_token
+            expires_at = int(getattr(self.auth_client, "expires_at", 0) or 0)
+            pixhawk_active = 1 if self._pixhawk_connected.is_set() else 0
+            if token and self.server_sock:
+                try:
+                    if hb_mode == "shifted" and len(token) == 64:
+                        frame = build_session_heartbeat_frame_shifted(
+                            sys_id,
+                            COMP_ONBOARD,
+                            self._mavlink_ka_seq,
+                            token,
+                            expires_at,
+                            sequence,
+                            pixhawk_active,
+                        )
+                    else:
+                        frame = build_session_heartbeat_frame(
+                            sys_id,
+                            COMP_ONBOARD,
+                            self._mavlink_ka_seq,
+                            token,
+                            expires_at,
+                            sequence,
+                            pixhawk_active,
+                        )
+                    self.server_sock.sendto(frame, self.target_addr)
+                    self._mavlink_ka_seq = (self._mavlink_ka_seq + 1) & 0xFF
+                    sequence = (sequence + 1) & 0xFFFF
+                except OSError as exc:
+                    global_metrics.add_log("WARN", f"MAVLink session keepalive failed: {exc}")
+            time.sleep(interval)
+
+    def _companion_status_loop(self) -> None:
+        while self.running:
+            if self.server_sock and self.auth_client.session_token:
+                fix, sats, px4_stream, diag = self._gps_diagnosis()
+                cam0, cam1 = self._camera_live_flags()
+                try:
+                    frame = build_dronebridge_status_frame(
+                        COMPANION_SYS_ID,
+                        COMP_ONBOARD,
+                        self._companion_seq,
+                        timestamp_ms=int(time.time() * 1000) & 0xFFFFFFFF,
+                        gps_fix_type=fix,
+                        gps_satellites=sats,
+                        gps_px4_streaming=px4_stream,
+                        gps_diagnosis=diag,
+                        camera0_live=cam0,
+                        camera1_live=cam1,
+                    )
+                    self.server_sock.sendto(frame, self.target_addr)
+                    self._companion_seq = (self._companion_seq + 1) & 0xFF
+                except OSError:
+                    pass
+            time.sleep(1)
 
     def _heartbeat_loop(self) -> None:
         while self.running:

@@ -2,182 +2,206 @@
 
 [Tiếng Việt](#tiếng-việt) | [English](#english)
 
+**Repository:** [github.com/hbqtechnologycompany/UAVLink-Edge-Python](https://github.com/hbqtechnologycompany/UAVLink-Edge-Python)
+
 ---
 
 ## English
 
-Dự án này là phiên bản viết bằng Python của UAVLink-Edge. Vai trò cốt lõi của ứng dụng là làm cầu nối (bridge) giữa mạch điều khiển bay (Flight Controller) thông qua giao thức MAVLink và hệ thống máy chủ **qcloudstation** tại địa chỉ [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
+Python implementation of **UAVLink-Edge** — a MAVLink bridge between the flight controller (Pixhawk/Cube) and the **qcloudstation** fleet server at [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
 
-This project is the Python implementation of UAVLink-Edge. The core role of this application is to act as a bridge between the Flight Controller (via MAVLink protocol) and the **qcloudstation** server at [http://qcloudcontrol.com/](http://qcloudcontrol.com/).
-
-Hệ thống cho phép người dùng giám sát và điều khiển phương tiện không người lái (UAV) gần như theo thời gian thực (near real-time) qua nền tảng đám mây (Cloud), mang đến trải nghiệm lưu loát và khả năng điều khiển từ xa tương tự như phần mềm QGroundControl truyền thống.
-
-The system allows users to monitor and control Unmanned Aerial Vehicles (UAVs) in near real-time via the Cloud, providing a smooth experience and remote control capabilities similar to traditional QGroundControl software.
+This release aligns the Python stack with **Pi_CM5_DroneBridgeService** (auth, MAVLink forwarding, camera/landing, web UI) while remaining **user-run**: no systemd install, no PBR tables — start with `./run.sh` or `venv/bin/python main.py`.
 
 ![Cloud Control Interface](images/pilot-ui.jpg)
 
-### System Block Diagram / Sơ đồ khối hệ thống
+### System block diagram
 
 ```text
-┌────────────────┐      MAVLink      ┌──────────────────────┐   UDP/TCP (WiFi)   ┌───────────────────────────┐
-│ Flight         │◄─────────────────►│     UAVLink-Edge     │◄──────────────────►│   qcloudstation Server    │
-│ Controller     │ (Serial/TCP/UDP)  │  (Raspberry Pi 5)    │                    │ (http://qcloudcontrol.com)│
-└────────────────┘                   └──────────────────────┘                    └───────────────────────────┘
+┌────────────────┐      MAVLink      ┌──────────────────────┐   UDP/VPN (WiFi/4G) ┌───────────────────────────┐
+│ Flight         │◄─────────────────►│   UAVLink-Edge-Python │◄───────────────────►│   qcloudstation Server    │
+│ Controller     │ Serial / Ethernet │   (Raspberry Pi 5)    │                     │ (http://qcloudcontrol.com)│
+└────────────────┘                   └──────────────────────┘                     └───────────────────────────┘
 ```
 
-## 🚀 1. Architecture Overview / Tổng quan Kiến trúc
+### What's new (2026-07 sync)
 
-The Python version operates with 3 core components:
-Phiên bản Python này hoạt động với 3 thành phần (module) cốt lõi:
+| Area | Updates |
+|------|---------|
+| **Auth & startup** | `REGISTER_INIT` v2 (`vehicle_type`, `model`); `cloud_egress.py` — short wait when no 4G modem (avoids 120s boot stall); session heartbeat in forwarder |
+| **MAVLink** | `prefer_ethernet` path (Pi ↔ Pixhawk over ETH); partner heartbeat on shared UDP socket; GPS filter; custom msgs 42998/42999; `DRONEBRIDGE_STATUS` |
+| **Camera / landing** | `camera_mavlink.py` (VIDEO_STREAM_STATUS/INFORMATION); `landing_mavlink.py` (LANDING_TARGET uplink); `Find_landing/` processing stack |
+| **VPN** | Re-provision on UUID mismatch; tolerate existing `uavlink0` interface |
+| **Web UI** | App-shell layout (`dashboard.html`, `connect.html`, `settings.html`, `mavlink.html`); APIs: `/api/network/mode`, `/api/camera/*`, hardware settings |
+| **4G (optional)** | Bundled `Module_4G/` for connection manager when netmon is present; works without 4G on WiFi-only setups |
+| **Run helper** | `run.sh` — always uses project `venv` (fixes `sudo python` / system Python missing pymavlink) |
 
-1.  **Auth Client (`auth_client.py`)**: Handles the HMAC-SHA256 handshake over TCP to authenticate the drone with the server. It maintains the `SessionToken` and sends Heartbeat packets to keep the connection alive.
-    (Đảm nhiệm quá trình bắt tay (handshake) bằng HMAC-SHA256 qua TCP để xác thực danh tính Drone với máy chủ. Nó duy trì `SessionToken` và gửi các gói tin Heartbeat để giữ kết nối.)
-2.  **MAVLink Forwarder (`forwarder.py`)**: Listens and communicates with the flight controller (Pixhawk/Cube) via Serial (UART) or TCP/UDP. Received data is encapsulated and forwarded to the Fleet Server via UDP.
-    (Lắng nghe và giao tiếp với mạch điều khiển bay (Pixhawk/Cube) thông qua cổng Serial (UART) hoặc TCP/UDP. Data nhận được sẽ được đóng gói và gửi lên Fleet Server qua giao thức UDP.)
-3.  **Web Server (`web_server.py`)**: Runs a lightweight Web API (Flask) on port 8080 for real-time status monitoring (`/api/status`).
-    (Chạy một web API siêu nhẹ (Flask) ở port 8080 để giám sát trạng thái (`/api/status`) theo thời gian thực.)
+### Core components
+
+1. **Auth Client (`auth_client.py`)** — HMAC-SHA256 TCP handshake, session token, keepalive, VPN provision request.
+2. **MAVLink Forwarder (`forwarder.py`)** — Serial, TCP, UDP, or **Ethernet** to Pixhawk; uplink/downlink to fleet server over UDP (often via WireGuard).
+3. **Web Server (`web/server.py`)** — Flask API + static Control Center on port **8080**.
+4. **Cloud egress (`cloud_egress.py`)** — Reads `/run/dronebridge/network_status.json` when netmon runs; skips long 4G wait in manual mode.
+5. **Camera / landing bridges** — MAVLink video stream status and precision-landing target injection.
 
 ---
 
-## 🛠️ 2. Environment & Deployment Guide / Hướng dẫn Triển khai
+## Quick start
 
-To run the system optimally without affecting OS Python libraries, we use a Virtual Environment (`venv`).
-Để chạy hệ thống một cách tối ưu, chúng ta sẽ sử dụng Môi trường ảo (`venv`).
+### 1. Clone and install
 
-### Step 1: Prepare source and environment / Chuẩn bị mã nguồn
 ```bash
-# Clone source code
-git clone <YOUR_REPO_URL>
+git clone https://github.com/hbqtechnologycompany/UAVLink-Edge-Python.git
 cd UAVLink-Edge-Python
+python3 install.py    # apt deps + venv + pip
+```
 
-# Create virtual environment / Tạo môi trường ảo
+Or manually:
+
+```bash
 python3 -m venv venv
-
-# Activate virtual environment / Kích hoạt môi trường ảo
 source venv/bin/activate
-```
-
-### Step 2: Install Dependencies / Cài đặt thư viện
-
-**Một lệnh (apt + venv + pip):**
-```bash
-python3 install.py
-```
-
-Hoặc thủ công:
-```bash
-# Upgrade pip / Cập nhật pip
-pip install --upgrade pip
-
-# Install required libraries / Cài đặt thư viện (tự cài apt trước)
 pip install -r requirements.txt
 ```
 
-`install.py` / `pip install -r requirements.txt` tự cài qua apt: `wireguard-tools`, `libcamera`, `ffmpeg`, `gstreamer` (xem `_bootstrap/_apt.py`).
+### 2. Configure `config.yaml`
 
-*(Ghi chú: `pymavlink` là thành phần quan trọng nhất để xử lý gói tin MAVLink.)*
-
-### Step 3: Configure `config.yaml` / Cấu hình
-You need to adjust `config.yaml` to match your hardware on Pi 5.
-Bạn cần cấu hình lại file `config.yaml` để phù hợp với phần cứng trên Pi 5.
+Key sections (see full file for camera, landing, VPN):
 
 ```yaml
-mavlink:
-    connection_type: "serial"    # Or "tcp_client", "udp_listen"
-    serial_port: "/dev/ttyAMA0"  # UART port on Pi 5
-    serial_baud: 57600           # Serial baudrate
-    
 auth:
-    uuid: "YOUR-DRONE-UUID"
-    shared_secret: "YOUR-SHARED-SECRET" # Get from qcloudcontrol.com
+  uuid: "YOUR-DRONE-UUID"
+  shared_secret: "YOUR-SHARED-SECRET"   # request: hbqsolution@gmail.com
+  vehicle_type: 0
+  model: ""
+
+mavlink:
+  connection_type: prefer_ethernet   # serial | udp_listen | prefer_ethernet
+
+ethernet:
+  local_ip: "10.41.10.10"
+  pixhawk_ip: "10.41.10.2"
+  pixhawk_port: 14550
+
+vpn:
+  enabled: true
+  server_endpoint: YOUR_SERVER:51820
+  router_vpn_ip: 10.8.0.1
 ```
-*Note: Make sure you have the `.drone_secret` file in the same directory or parent directory if already registered.* (Run app with --register to get the secret key from server)
-*To request a "SHARED-SECRET", please send an email to: hbqsolution@gmail.com*
-*(Lưu ý: Để lấy "YOUR-SHARED-SECRET", vui lòng gửi email request tới hbqsolution@gmail.com)*
 
-### Step 4: Run Application / Chạy ứng dụng
+### 3. Register (first time)
 
-#### First time: Register Drone / Lần đầu: Đăng ký Drone
-You need to register the drone first to get the unique `SecretKey` (saved to `.drone_secret`).
-Bạn cần đăng ký drone trước để lấy mã khóa `SecretKey` (Lưu tại file `.drone_secret`).
 ```bash
-python3 main.py --register
+./run.sh --register
+# or: ./venv/bin/python main.py --register
 ```
 
-Nếu `Authenticated` nhưng **không thấy drone trên server**, chạy lại `--register` (protocol `REGISTER_INIT` 0xA0) để server nhận đúng SecretKey. Khi chạy bình thường, client gửi **IP thật** trong `AUTH_RESPONSE` để server hiển thị online.
+Secret is saved to `.drone_secret` (gitignored).
 
-#### Subsequent runs / Các lần sau
-Once registered, run directly to start the bridge.
-Sau khi đã đăng ký, chạy trực tiếp ứng dụng:
+### 4. Run
+
 ```bash
-# Direct run / Chạy trực tiếp (khuyến nghị — trong venv)
-source venv/bin/activate
-python main.py
-
-# VPN cần quyền root cho wg-quick — một trong hai cách:
-sudo python main.py          # tự chuyển sang venv/bin/python
-# hoặc:
-sudo ./venv/bin/python main.py
-
-# Run in background / Chạy ẩn
-nohup ./venv/bin/python main.py > uavlink.log 2>&1 &
+./run.sh
+# VPN / wg-quick may need root on first provision:
+sudo ./run.sh
 ```
 
+**Dashboard:** `http://<PI_IP>:8080/` → redirects to Control Center  
+**MAVLink stats:** `http://<PI_IP>:8080/mavlink.html`  
+**API:** `http://<PI_IP>:8080/api/status`
 
-Check system status / Kiểm tra trạng thái:
-👉 `http://<PI_5_IP>:8080/api/status`
+### Coexistence with DroneBridge (Go)
+
+If **DroneBridge Go** was installed via `/opt/dronebridge`, disable autostart to avoid port **8080** conflicts and stale metrics:
+
+```bash
+sudo systemctl disable --now dronebridge.service dronebridge-netmon.service dronebridge-4g-init.service
+```
+
+UAVLink-Edge-Python is intended to be started manually (or add your own systemd unit later).
 
 ---
 
-## 💻 3. Development Guide / Hướng dẫn Phát triển
+## Directory structure
 
-### MAVLink Port & Routing (`forwarder.py`)
-- All MAVLink logic is contained in the `Forwarder` class.
-- To add internal logic (e.g., packet filtering, custom headers), modify `uplink_loop()` and `downlink_loop()`.
-- `self.pixhawk_conn` holds the hardware connection. Use `self.pixhawk_conn.write(data)` for commands (ARM/DISARM, param changes).
-
-### Web API Integration (`web_server.py`)
-- For local drone features over WiFi (e.g., ESC Calib tool), modify `web_server.py`.
-- Add endpoints using Flask:
-  ```python
-  @app.route('/api/custom_action', methods=['POST'])
-  def custom_action():
-      # Interaction code with Pixhawk here
-      return jsonify({"success": True})
-  ```
-
-### Camera Stream (H.264 & RTSP)
-- **USB/CSI Camera**: Use `libcamera-vid` (Official tool for Pi 5, supports both USB and CSI):
-  ```bash
-  libcamera-vid -t 0 --inline --codec h264 --width 1280 --height 720 --framerate 30 -o rtsp://<SERVER_IP>:8554/<DRONE_UUID>
-  ```
-  *(Note: For USB camera, ensure it is recognized as `/dev/video0`. You can specify a different device using the `--camera` flag if needed.)*
-
-### Authentication Process / Quy trình Xác thực
-The Python version follows the 4-step handshake:
-1.  **Send UUID**: Drone connects to TCP (Port 5770) and sends `0x01` + UUID.
-2.  **Receive Challenge**: Server returns `0x02` + `Nonce`.
-3.  **Sign Signature**: Drone uses `SHA256(SecretKey + SharedSecret)` as the HMAC key to sign the `Nonce` + `Timestamp` (packet `0x03`).
-4.  **Receive Token**: Server verifies and returns `0x04` + `SessionToken`. Subsequent UDP processes use this token for valid permission.
-
----
-
-## Directory Structure / Cấu trúc thư mục
-
-```
+```text
 UAVLink-Edge-Python/
-├── auth_client.py      # Secure HMAC authentication module
-├── config.py           # YAML configuration parser
-├── config.yaml         # Local configuration file
-├── forwarder.py        # MAVLink Bridge using `pymavlink`
-├── main.py             # Main entry point
-├── README.md           # Documentation
-├── requirements.txt    # PIP dependencies
-└── web_server.py       # Mini API Framework (Flask)
+├── main.py                 # Entry point (venv re-exec, startup flow)
+├── run.sh                  # Wrapper: venv/bin/python main.py
+├── auth_client.py          # Fleet authentication
+├── forwarder.py            # MAVLink bridge + partner heartbeat
+├── cloud_egress.py         # Netmon / cloud_ready wait (user-run friendly)
+├── camera_mavlink.py       # VIDEO_STREAM MAVLink to GCS
+├── landing_mavlink.py      # LANDING_TARGET uplink
+├── mavlink_custom.py       # Custom messages + GPS filter
+├── vpn_manager.py          # WireGuard provision & lifecycle
+├── config.yaml             # Local configuration
+├── Module_4G/              # Optional 4G connection manager
+├── Find_landing/           # Camera capture, ArUco/H landing detection
+├── web/
+│   ├── server.py           # Flask routes
+│   ├── network_mode.py     # Network mode API
+│   ├── camera_service.py   # Camera / overlay control
+│   └── static/             # dashboard, connect, settings, mavlink UI
+├── AUTHENTICATION_PROTOCOL.md
+├── STARTUP_FLOW.md
+└── requirements.txt
 ```
+
+---
+
+## Authentication (summary)
+
+1. Drone sends UUID (`0x01`) on TCP port **5770**.
+2. Server returns challenge nonce (`0x02`).
+3. Drone signs with HMAC key `SHA256(SecretKey + SharedSecret)` (`0x03`).
+4. Server returns session token (`0x04`); UDP forwarding uses this token.
+
+Details: [AUTHENTICATION_PROTOCOL.md](AUTHENTICATION_PROTOCOL.md), startup order: [STARTUP_FLOW.md](STARTUP_FLOW.md).
 
 ---
 
 ## Tiếng Việt
 
-(Nội dung tiếng Việt tương tự như trên đã được lồng ghép song ngữ)
+### Giới thiệu
+
+**UAVLink-Edge-Python** là bridge MAVLink giữa Pixhawk và server **qcloudstation**, chạy trên Raspberry Pi 5. Bản cập nhật này đồng bộ tính năng với stack **Pi_CM5_DroneBridgeService** nhưng **không** cài systemd/PBR — người dùng tự chạy bằng `./run.sh`.
+
+### Tính năng mới (đồng bộ 2026-07)
+
+- **Khởi động & xác thực:** `REGISTER_INIT` v2; không kẹt 120s khi không có modem 4G (`cloud_egress.py`).
+- **MAVLink:** Ưu tiên Ethernet Pi ↔ Pixhawk; partner heartbeat dùng chung socket UDP; lọc GPS; message tùy chỉnh.
+- **Camera & landing:** Trạng thái luồng video qua MAVLink; `LANDING_TARGET` cho auto-landing; module `Find_landing/`.
+- **Web UI:** Giao diện Control Center (dashboard, kết nối, cài đặt, thống kê MAVLink).
+- **VPN:** WireGuard tự provision; xử lý interface đã tồn tại.
+- **`run.sh`:** Luôn dùng đúng `venv` (tránh thiếu pymavlink khi `sudo python`).
+
+### Chạy nhanh
+
+```bash
+git clone https://github.com/hbqtechnologycompany/UAVLink-Edge-Python.git
+cd UAVLink-Edge-Python
+python3 install.py
+# Sửa config.yaml (uuid, shared_secret, ethernet, vpn)
+./run.sh --register          # lần đầu
+./run.sh                     # các lần sau
+```
+
+Mở trình duyệt: `http://<IP_PI>:8080/`
+
+### Lưu ý khi đã cài DroneBridge Go
+
+Tắt service tự khởi động để tránh chiếm port 8080:
+
+```bash
+sudo systemctl disable --now dronebridge.service dronebridge-netmon.service dronebridge-4g-init.service
+```
+
+### Liên hệ shared secret
+
+Email: **hbqsolution@gmail.com**
+
+---
+
+## License / About
+
+Project site: [hbqtechnologycompany.github.io/UAVLink-Edge-Python/](https://hbqtechnologycompany.github.io/UAVLink-Edge-Python/)

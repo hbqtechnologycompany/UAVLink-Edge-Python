@@ -21,6 +21,8 @@ class Config:
         self.video = self.data.get("video", {})
         self.camera = self.data.get("camera", {})
         self.ethernet = self.data.get("ethernet", {})
+        self.landing = self.data.get("landing", {})
+        self.lcd = self.data.get("lcd", {})
         self.vpn = self.data.get("vpn", {})
 
     def _sync_network_aliases(self):
@@ -59,5 +61,8 @@ class Config:
             "target_host": self.network.get("target_host"),
             "target_port": self.network.get("target_port"),
             "protocol": self.network.get("protocol", "udp"),
-            "mode": self.network.get("mode", "wifi_only"),
+            "mode": self.network.get("mode", "prefer_4g"),
+            "cloud_wifi_fallback": self.network.get("cloud_wifi_fallback", True),
+            "forward_gps_raw_int": self.network.get("forward_gps_raw_int", True),
+            "fallback_delay": self.network.get("fallback_delay", 300),
         }

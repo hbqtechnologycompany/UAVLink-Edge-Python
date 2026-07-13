@@ -9,6 +9,8 @@
     <title>Connection Settings - UAVLink-Edge</title>
     <!-- Version: 2026-01-27-16:45 -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="common-nav.css" rel="stylesheet">
+    <script src="common-nav.js"></script>
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -229,7 +231,7 @@
 
         .priority-selector {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
         }
@@ -359,13 +361,11 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <a href="dashboard.html" class="back-btn">
-                ← Quay lại
-            </a>
-            <h1>📡 Connection Settings</h1>
-        </div>
+    <header class="db-shell-header">
+        <a href="/dashboard.html" class="db-back-btn">← Về Dashboard</a>
+        <h1 class="db-shell-title">📡 Server &amp; Mạng</h1>
+    </header>
+    <div class="container" style="padding-top:1rem;">
 
         <!-- Status Overview -->
         <div class="status-overview">
@@ -427,31 +427,41 @@
             </div>
         </div>
 
-        <!-- Priority Settings -->
+        <!-- Uplink Mode (config.yaml → network.mode) -->
         <div class="setting-section">
             <div class="section-title">
                 <span class="section-icon">⚡</span>
-                Connection Priority
+                Chế độ uplink server
             </div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                Điều khiển đường truyền MAVLink/VPN lên server. SSH và dashboard admin vẫn qua WiFi.
+            </p>
 
             <div class="priority-selector">
-                <div class="priority-option active" id="priority-wifi" onclick="setPriority('wifi')">
+                <div class="priority-option" id="mode-wifi_only" onclick="selectMode('wifi_only')">
                     <div class="priority-option-icon">📶</div>
-                    <div class="priority-option-name">WiFi Priority</div>
-                    <div class="priority-option-desc">Ưu tiên WiFi nếu khả dụng, tốc độ cao hơn</div>
+                    <div class="priority-option-name">WiFi</div>
+                    <div class="priority-option-desc">Luôn dùng WiFi cho server (wlan0)</div>
                 </div>
 
-                <div class="priority-option" id="priority-4g" onclick="setPriority('4g')">
+                <div class="priority-option" id="mode-prefer_4g" onclick="selectMode('prefer_4g')">
                     <div class="priority-option-icon">📡</div>
-                    <div class="priority-option-name">4G Priority</div>
-                    <div class="priority-option-desc">Ưu tiên 4G, độ tin cậy cao, phạm vi rộng</div>
+                    <div class="priority-option-name">4G ưu tiên</div>
+                    <div class="priority-option-desc">Ưu tiên 4G; có thể fallback WiFi khi mất sóng</div>
+                </div>
+
+                <div class="priority-option" id="mode-4g_only" onclick="selectMode('4g_only')">
+                    <div class="priority-option-icon">🔒</div>
+                    <div class="priority-option-name">Chỉ 4G</div>
+                    <div class="priority-option-desc">Không fallback WiFi cho uplink server</div>
                 </div>
             </div>
 
             <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                <button class="btn btn-secondary" onclick="switchNetwork('wifi')">↔ Chuyển sang WiFi</button>
-                <button class="btn btn-secondary" onclick="switchNetwork('4g')">↔ Chuyển sang 4G</button>
+                <button class="btn btn-secondary" onclick="switchNetwork('wifi')">↔ Chuyển sang WiFi ngay</button>
+                <button class="btn btn-secondary" onclick="switchNetwork('4g')">↔ Chuyển sang 4G ngay</button>
             </div>
+            <div id="modeStatusLine" style="margin-top: 0.75rem; font-size: 0.875rem; color: var(--text-secondary);"></div>
         </div>
 
         <!-- Advanced Settings -->
@@ -463,10 +473,10 @@
 
             <div class="setting-row">
                 <div class="setting-info">
-                    <div class="setting-name">Auto-switching</div>
-                    <div class="setting-desc">Tự động chuyển đổi giữa WiFi và 4G khi cần thiết</div>
+                    <div class="setting-name">Fallback WiFi (khi 4G mất)</div>
+                    <div class="setting-desc">Chỉ áp dụng khi chế độ «4G ưu tiên». Tắt = khóa uplink trên 4G dù WiFi còn sóng.</div>
                 </div>
-                <div class="toggle-switch active" id="autoSwitch" onclick="toggleAutoSwitch()"></div>
+                <div class="toggle-switch active" id="cloudWifiFallback" onclick="toggleCloudWifiFallback()"></div>
             </div>
 
             <div class="setting-row">
@@ -554,8 +564,8 @@
     </div>
 
     <script>
-        let currentPriority = 'wifi';
-        let autoSwitch = true;
+        let currentMode = 'prefer_4g';
+        let cloudWifiFallback = true;
         let autoReconnect = true;
         let last4gConnected = null;
         
@@ -578,44 +588,53 @@
 
         function loadSettings() {
             Promise.all([
-                fetch('/api/network/priority').then(response => response.json()),
+                fetch('/api/network/mode').then(response => response.json()),
                 Promise.resolve(JSON.parse(localStorage.getItem('connectionUiSettings') || '{}'))
             ])
-                .then(([priorityData, localSettings]) => {
-                    currentPriority = (priorityData && priorityData.priority) || 'wifi';
-                    autoSwitch = localSettings.auto_switch !== false;
+                .then(([modeData, localSettings]) => {
+                    currentMode = (modeData && modeData.mode) || 'prefer_4g';
+                    cloudWifiFallback = modeData.cloud_wifi_fallback !== false;
                     autoReconnect = localSettings.auto_reconnect !== false;
 
                     const wifiThreshold = Number.isFinite(localSettings.wifi_threshold) ? localSettings.wifi_threshold : -70;
                     const timeout = Number.isFinite(localSettings.timeout) ? localSettings.timeout : 10;
 
-                    document.querySelectorAll('.priority-option').forEach(opt => opt.classList.remove('active'));
-                    document.getElementById('priority-' + currentPriority).classList.add('active');
-                    document.getElementById('autoSwitch').classList.toggle('active', autoSwitch);
+                    highlightMode(currentMode);
+                    updateModeStatusLine(modeData);
+                    document.getElementById('cloudWifiFallback').classList.toggle('active', cloudWifiFallback);
                     document.getElementById('autoReconnect').classList.toggle('active', autoReconnect);
                     document.getElementById('wifiThreshold').value = String(wifiThreshold);
                     document.getElementById('timeout').value = String(timeout);
                 })
                 .catch(() => {
-                    document.querySelectorAll('.priority-option').forEach(opt => opt.classList.remove('active'));
-                    document.getElementById('priority-' + currentPriority).classList.add('active');
+                    highlightMode(currentMode);
                 });
         }
 
-        function setPriority(priority) {
-            currentPriority = priority;
-            document.querySelectorAll('.priority-option').forEach(opt => {
-                opt.classList.remove('active');
-            });
-            document.getElementById('priority-' + priority).classList.add('active');
-            
-            addLog(`Connection priority set to ${priority.toUpperCase()}`);
+        function highlightMode(mode) {
+            document.querySelectorAll('.priority-option').forEach(opt => opt.classList.remove('active'));
+            const el = document.getElementById('mode-' + mode);
+            if (el) el.classList.add('active');
         }
 
-        function toggleAutoSwitch() {
-            autoSwitch = !autoSwitch;
-            document.getElementById('autoSwitch').classList.toggle('active', autoSwitch);
-            addLog(`Auto-switching ${autoSwitch ? 'enabled' : 'disabled'}`);
+        function updateModeStatusLine(modeData) {
+            const line = document.getElementById('modeStatusLine');
+            if (!line || !modeData) return;
+            const active = modeData.active_interface || '—';
+            const reason = modeData.route_reason ? ` (${modeData.route_reason})` : '';
+            line.textContent = `Mode: ${modeData.mode || currentMode} · Uplink hiện tại: ${active}${reason}`;
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            highlightMode(mode);
+            addLog(`Chế độ uplink: ${mode}`);
+        }
+
+        function toggleCloudWifiFallback() {
+            cloudWifiFallback = !cloudWifiFallback;
+            document.getElementById('cloudWifiFallback').classList.toggle('active', cloudWifiFallback);
+            addLog(`Fallback WiFi ${cloudWifiFallback ? 'bật' : 'tắt'}`);
         }
 
         function toggleAutoReconnect() {
@@ -626,25 +645,29 @@
 
         function saveSettings() {
             const uiSettings = {
-                auto_switch: autoSwitch,
                 auto_reconnect: autoReconnect,
                 wifi_threshold: parseInt(document.getElementById('wifiThreshold').value, 10),
                 timeout: parseInt(document.getElementById('timeout').value, 10)
             };
 
-            fetch('/api/network/priority', {
+            fetch('/api/network/mode', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ priority: currentPriority })
+                body: JSON.stringify({
+                    mode: currentMode,
+                    cloud_wifi_fallback: cloudWifiFallback
+                })
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         localStorage.setItem('connectionUiSettings', JSON.stringify(uiSettings));
-                        showNotification('✓ Settings saved successfully');
-                        addLog(`Priority saved: ${currentPriority.toUpperCase()}`);
+                        showNotification('✓ Đã lưu chế độ uplink');
+                        addLog(`Mode saved: ${currentMode}`);
+                        updateModeStatusLine(data);
+                        setTimeout(updateConnectionStatus, 2500);
                     } else {
                         showNotification(`✗ ${data.message || 'Failed to save settings'}`, true);
                     }
@@ -669,11 +692,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        currentPriority = target;
-                        document.querySelectorAll('.priority-option').forEach(opt => opt.classList.remove('active'));
-                        document.getElementById('priority-' + target).classList.add('active');
-                        showNotification(`✓ Switched to ${networkName} (triggered)`);
-                        addLog(`Network switch triggered: ${networkName}`);
+                        currentMode = data.mode || (target === 'wifi' ? 'wifi_only' : 'prefer_4g');
+                        highlightMode(currentMode);
+                        showNotification(`✓ Đã chuyển sang ${networkName} (mode=${currentMode})`);
+                        addLog(`Network switch: ${networkName} → ${currentMode}`);
+                        updateModeStatusLine(data);
                         setTimeout(updateConnectionStatus, 2500);
                     } else {
                         showNotification(`✗ ${data.message || 'Switch failed'}`, true);
@@ -834,14 +857,17 @@
                             const serverSignal = document.getElementById('serverSignal');
                             const serverStatus = document.getElementById('serverStatus');
                             
-                            if (statusData.auth_status === 'Authenticated') {
+                            if (statusData.server_reachable || statusData.auth_status === 'Authenticated') {
                                 serverSignal.style.color = 'var(--accent-green)';
                                 serverSignal.textContent = '●';
-                                serverStatus.textContent = 'Connected - Real-time';
+                                serverStatus.textContent = statusData.auth_status === 'Reconnecting'
+                                    ? 'Reconnecting...'
+                                    : 'Connected - Real-time';
                             } else {
                                 serverSignal.style.color = 'var(--accent-red)';
                                 serverSignal.textContent = '●';
-                                serverStatus.textContent = 'Disconnected';
+                                const reason = statusData.disconnect_reason ? ` - ${statusData.disconnect_reason}` : '';
+                                serverStatus.textContent = 'Disconnected' + reason;
                             }
                         })
                         .catch(err => {

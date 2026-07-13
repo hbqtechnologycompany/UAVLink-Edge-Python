@@ -1,0 +1,511 @@
+{
+  "description": "CSI camera types supported on Raspberry Pi CM5 / libcamera (dtoverlay)",
+  "default_stream_profile": {
+    "recommended": "1280x720",
+    "hint": "Default profile — 720p balances sharpness and drone bandwidth.",
+    "groups": [
+      {
+        "label": "4:3",
+        "options": [
+          { "value": "320x240", "text": "320×240" },
+          { "value": "640x480", "text": "640×480 (Landing)" },
+          { "value": "800x600", "text": "800×600" },
+          { "value": "1024x768", "text": "1024×768" },
+          { "value": "1280x960", "text": "1280×960" }
+        ]
+      },
+      {
+        "label": "16:9",
+        "options": [
+          { "value": "640x360", "text": "640×360" },
+          { "value": "1280x720", "text": "1280×720 (720p)" },
+          { "value": "1920x1080", "text": "1920×1080 (1080p)" }
+        ]
+      }
+    ]
+  },
+  "sensors": [
+    {
+      "id": "ov5647",
+      "overlay": "ov5647",
+      "name": "Camera Module v1",
+      "module": "Raspberry Pi Camera Module v1",
+      "i2c_addr": "0x36",
+      "megapixel": 5,
+      "stream_profile": {
+        "recommended": "1296x972",
+        "hint": "5MP 4:3 sensor — prefer native 4:3 resolutions; 16:9 crops the sides.",
+        "groups": [
+          {
+            "label": "4:3 native (recommended)",
+            "options": [
+              { "value": "320x240", "text": "320×240 (QVGA)" },
+              { "value": "424x320", "text": "424×320" },
+              { "value": "640x480", "text": "640×480 (Landing)" },
+              { "value": "800x600", "text": "800×600 (SVGA)" },
+              { "value": "960x720", "text": "960×720" },
+              { "value": "1024x768", "text": "1024×768 (XGA)" },
+              { "value": "1296x972", "text": "1296×972 ★ stream native" },
+              { "value": "1600x1200", "text": "1600×1200 (UXGA)" },
+              { "value": "1920x1440", "text": "1920×1440" },
+              { "value": "2592x1944", "text": "2592×1944 (max 5MP)" }
+            ]
+          },
+          {
+            "label": "16:9 crop",
+            "options": [
+              { "value": "426x240", "text": "426×240" },
+              { "value": "640x360", "text": "640×360" },
+              { "value": "854x480", "text": "854×480" },
+              { "value": "960x540", "text": "960×540" },
+              { "value": "1280x720", "text": "1280×720 (720p)" },
+              { "value": "1920x1080", "text": "1920×1080 (1080p)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx219",
+      "overlay": "imx219",
+      "name": "Camera Module v2",
+      "module": "Raspberry Pi Camera Module v2",
+      "i2c_addr": "0x10",
+      "megapixel": 8,
+      "stream_profile": {
+        "recommended": "1640x1232",
+        "hint": "IMX219 8MP — 1640×1232 hoặc 1280×720 cân bằng tốt cho bay; max still 3280×2464.",
+        "groups": [
+          {
+            "label": "4:3 — native IMX219",
+            "options": [
+              { "value": "640x480", "text": "640×480 (Landing)" },
+              { "value": "1280x960", "text": "1280×960" },
+              { "value": "1640x1232", "text": "1640×1232 ★ stream 4:3" },
+              { "value": "1928x1088", "text": "1928×1088" },
+              { "value": "2328x1748", "text": "2328×1748" },
+              { "value": "3280x2464", "text": "3280×2464 (max 8MP)" }
+            ]
+          },
+          {
+            "label": "16:9 — crop",
+            "options": [
+              { "value": "640x360", "text": "640×360" },
+              { "value": "1280x720", "text": "1280×720 (720p)" },
+              { "value": "1920x1080", "text": "1920×1080 (1080p)" },
+              { "value": "3840x2160", "text": "3840×2160 (4K crop)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx477",
+      "overlay": "imx477",
+      "name": "Camera Module HQ",
+      "module": "Raspberry Pi HQ Camera",
+      "i2c_addr": "0x1a",
+      "megapixel": 12,
+      "stream_profile": {
+        "recommended": "2028x1520",
+        "hint": "HQ 12MP — cần ống kính C/CS; 2028×1520 đủ nét cho stream, 4056×3040 nặng băng thông.",
+        "groups": [
+          {
+            "label": "4:3 — native IMX477",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1332x990", "text": "1332×990" },
+              { "value": "2028x1520", "text": "2028×1520 ★ stream" },
+              { "value": "4056x3040", "text": "4056×3040 (max 12MP)" }
+            ]
+          },
+          {
+            "label": "16:9 — crop",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080" },
+              { "value": "2592x1944", "text": "2592×1944" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx708",
+      "overlay": "imx708",
+      "name": "Camera Module 3",
+      "module": "Raspberry Pi Camera Module 3",
+      "i2c_addr": "0x1a",
+      "megapixel": 12,
+      "stream_profile": {
+        "recommended": "2304x1296",
+        "hint": "CM3 hỗ trợ HDR/AF — 2304×1296 hoặc 1280×720 cho latency thấp.",
+        "groups": [
+          {
+            "label": "4:3 / square crop",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1536x864", "text": "1536×864" },
+              { "value": "2304x1296", "text": "2304×1296 ★ stream" },
+              { "value": "4608x2592", "text": "4608×2592 (max)" }
+            ]
+          },
+          {
+            "label": "16:9",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080" },
+              { "value": "3840x2160", "text": "3840×2160" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx519",
+      "overlay": "imx519",
+      "name": "IMX519 16MP",
+      "module": "Arducam / 3rd-party 16MP",
+      "i2c_addr": "0x1a",
+      "megapixel": 16,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "16MP — stream nên ≤1080p/1440p; full 4656×3496 chỉ khi cần ghi hình.",
+        "groups": [
+          {
+            "label": "4:3",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1920x1440", "text": "1920×1440" },
+              { "value": "2328x1748", "text": "2328×1748" },
+              { "value": "4656x3496", "text": "4656×3496 (max 16MP)" }
+            ]
+          },
+          {
+            "label": "16:9",
+            "options": [
+              { "value": "1280x720", "text": "1280×720 ★ stream" },
+              { "value": "1920x1080", "text": "1920×1080" },
+              { "value": "3840x2160", "text": "3840×2160" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx290",
+      "overlay": "imx290",
+      "name": "IMX290",
+      "module": "Sony STARVIS IMX290",
+      "i2c_addr": "0x1a",
+      "megapixel": 2,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "STARVIS 2MP tối — 1080p native; 720p giảm băng thông ban đêm.",
+        "groups": [
+          {
+            "label": "16:9 native",
+            "options": [
+              { "value": "640x360", "text": "640×360" },
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080 ★ max" }
+            ]
+          },
+          {
+            "label": "4:3 crop",
+            "options": [
+              { "value": "640x480", "text": "640×480 (Landing)" },
+              { "value": "960x720", "text": "960×720" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx462",
+      "overlay": "imx462",
+      "name": "IMX462",
+      "module": "Sony STARVIS IMX462",
+      "i2c_addr": "0x1a",
+      "megapixel": 2,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "Giống IMX290 — ưu tiên 1080p cho low-light.",
+        "groups": [
+          {
+            "label": "16:9 native",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080 ★ max" }
+            ]
+          },
+          {
+            "label": "4:3",
+            "options": [
+              { "value": "640x480", "text": "640×480 (Landing)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx296",
+      "overlay": "imx296",
+      "name": "IMX296 GS",
+      "module": "Global Shutter IMX296",
+      "i2c_addr": "0x1a",
+      "megapixel": 1.6,
+      "stream_profile": {
+        "recommended": "1456x1088",
+        "hint": "Global shutter — 1456×1088 native; phù hợp bay nhanh, ít mờ chuyển động.",
+        "groups": [
+          {
+            "label": "Native",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1456x1088", "text": "1456×1088 ★ max" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx378",
+      "overlay": "imx378",
+      "name": "IMX378",
+      "module": "12MP IMX378",
+      "i2c_addr": "0x1a",
+      "megapixel": 12,
+      "stream_profile": {
+        "recommended": "2028x1520",
+        "hint": "12MP — stream 2028×1520 hoặc 1080p.",
+        "groups": [
+          {
+            "label": "4:3",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "2028x1520", "text": "2028×1520 ★ stream" },
+              { "value": "4056x3040", "text": "4056×3040 (max)" }
+            ]
+          },
+          {
+            "label": "16:9",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx415",
+      "overlay": "imx415",
+      "name": "IMX415",
+      "module": "8MP IMX415",
+      "i2c_addr": "0x1a",
+      "megapixel": 8,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "8MP 4K sensor — 1080p/1440p cho stream ổn định.",
+        "groups": [
+          {
+            "label": "16:9",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080 ★ stream" },
+              { "value": "3840x2160", "text": "3840×2160" }
+            ]
+          },
+          {
+            "label": "4:3",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1920x1440", "text": "1920×1440" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx258",
+      "overlay": "imx258",
+      "name": "IMX258",
+      "module": "IMX258 12MP",
+      "i2c_addr": "0x1a",
+      "megapixel": 12,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "12MP — tương tự IMX378/519, stream ≤1080p khuyến nghị.",
+        "groups": [
+          {
+            "label": "16:9",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080 ★ stream" },
+              { "value": "3840x2160", "text": "3840×2160" }
+            ]
+          },
+          {
+            "label": "4:3",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "4032x3024", "text": "4032×3024 (max)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "imx335",
+      "overlay": "imx335",
+      "name": "IMX335",
+      "module": "5MP IMX335",
+      "i2c_addr": "0x1a",
+      "megapixel": 5,
+      "stream_profile": {
+        "recommended": "1296x972",
+        "hint": "5MP 4:3 — gần giống OV5647, dùng 1296×972 hoặc 720p.",
+        "groups": [
+          {
+            "label": "4:3",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1296x972", "text": "1296×972 ★ stream" },
+              { "value": "2592x1944", "text": "2592×1944 (max)" }
+            ]
+          },
+          {
+            "label": "16:9",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ov9281",
+      "overlay": "ov9281",
+      "name": "OV9281",
+      "module": "Global Shutter OV9281 1MP",
+      "i2c_addr": "0x60",
+      "megapixel": 1,
+      "stream_profile": {
+        "recommended": "1280x800",
+        "hint": "Global shutter 1MP — max 1280×800; tốt cho tracking chuyển động.",
+        "groups": [
+          {
+            "label": "Native 16:10",
+            "options": [
+              { "value": "640x400", "text": "640×400" },
+              { "value": "1280x800", "text": "1280×800 ★ max" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ov7251",
+      "overlay": "ov7251",
+      "name": "OV7251",
+      "module": "Global Shutter OV7251 VGA",
+      "i2c_addr": "0x60",
+      "megapixel": 0.3,
+      "stream_profile": {
+        "recommended": "640x480",
+        "hint": "VGA global shutter — chỉ 640×480 hoặc thấp hơn.",
+        "groups": [
+          {
+            "label": "VGA",
+            "options": [
+              { "value": "320x240", "text": "320×240" },
+              { "value": "640x480", "text": "640×480 ★ max" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ov2311",
+      "overlay": "ov2311",
+      "name": "OV2311",
+      "module": "Global Shutter OV2311 2MP",
+      "i2c_addr": "0x60",
+      "megapixel": 2,
+      "stream_profile": {
+        "recommended": "1600x1300",
+        "hint": "GS 2MP — 1600×1300 native.",
+        "groups": [
+          {
+            "label": "Native",
+            "options": [
+              { "value": "640x480", "text": "640×480" },
+              { "value": "1600x1300", "text": "1600×1300 ★ max" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ov64a40",
+      "overlay": "ov64a40",
+      "name": "OV64A40",
+      "module": "64MP OV64A40",
+      "i2c_addr": "0x36",
+      "megapixel": 64,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "64MP — chỉ stream ≤4K; full resolution quá nặng cho drone link.",
+        "groups": [
+          {
+            "label": "Stream (recommended)",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080 ★ stream" },
+              { "value": "3840x2160", "text": "3840×2160" }
+            ]
+          },
+          {
+            "label": "Still / recording",
+            "options": [
+              { "value": "8000x6000", "text": "8000×6000" },
+              { "value": "9152x6944", "text": "9152×6944 (max)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "arducam-64mp",
+      "overlay": "arducam-64mp",
+      "name": "Arducam 64MP",
+      "module": "Arducam 64MP",
+      "i2c_addr": "0x1a",
+      "megapixel": 64,
+      "stream_profile": {
+        "recommended": "1920x1080",
+        "hint": "64MP Arducam — stream 720p/1080p; reboot CM5 sau khi đổi overlay.",
+        "groups": [
+          {
+            "label": "Stream",
+            "options": [
+              { "value": "1280x720", "text": "1280×720" },
+              { "value": "1920x1080", "text": "1920×1080 ★ stream" },
+              { "value": "3840x2160", "text": "3840×2160" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "arducam-pivariety",
+      "overlay": "arducam-pivariety",
+      "name": "Arducam Pivariety",
+      "module": "Arducam Pivariety",
+      "i2c_addr": "0x1a",
+      "megapixel": 0
+    }
+  ]
+}

@@ -79,7 +79,31 @@ class VPNManager:
 
     def is_running(self) -> bool:
         with self._lock:
-            return self._running
+            if self._running:
+                return True
+            return self._interface_up()
+
+    def _interface_up(self) -> bool:
+        try:
+            result = subprocess.run(
+                ["ip", "-4", "addr", "show", _INTERFACE],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                return False
+            match = re.search(r"inet (\S+)", result.stdout or "")
+            if not match:
+                return False
+            ip = match.group(1).split("/", 1)[0]
+            cfg = self._cfg or self.load_config() or {}
+            if ip:
+                cfg["assigned_ip"] = ip
+                self._cfg = cfg
+            return True
+        except (subprocess.TimeoutExpired, OSError):
+            return False
 
     def save_provisioned(
         self,
@@ -137,7 +161,13 @@ class VPNManager:
 
     def start(self) -> None:
         with self._lock:
-            if self._running:
+            if self._running or self._interface_up():
+                self._running = True
+                logger.info(
+                    "[VPN] Using existing %s — assigned %s",
+                    _INTERFACE,
+                    self.get_assigned_ip(),
+                )
                 return
             cfg = self.load_config()
             if not cfg:
@@ -159,6 +189,14 @@ class VPNManager:
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
                 err = (result.stderr or result.stdout or "").strip()
+                if "already exists" in err.lower() and self._interface_up():
+                    self._running = True
+                    logger.info(
+                        "[VPN] Interface %s already up — assigned %s",
+                        _INTERFACE,
+                        self.get_assigned_ip(),
+                    )
+                    return
                 raise RuntimeError(f"wg-quick up failed: {err}")
 
             self._running = True

@@ -9,17 +9,19 @@ def _reexec_with_venv_python() -> None:
     """sudo python main.py → dùng venv/bin/python (tránh thiếu pymavlink)."""
     if os.environ.get("UAVLINK_VENV_REEXEC") == "1":
         return
-    venv_python = Path(__file__).resolve().parent / "venv" / "bin" / "python"
+    root = Path(__file__).resolve().parent
+    venv_python = root / "venv" / "bin" / "python3"
+    if not venv_python.is_file():
+        venv_python = root / "venv" / "bin" / "python"
     if not venv_python.is_file():
         return
-    try:
-        if Path(sys.executable).resolve() == venv_python.resolve():
-            return
-    except OSError:
+    venv_root = str(venv_python.parent.parent)
+    # Debian venv: python3 → /usr/bin/python3; so compare prefix, not executable path.
+    if sys.prefix == venv_root or os.environ.get("VIRTUAL_ENV") == venv_root:
         return
     env = os.environ.copy()
     env["UAVLINK_VENV_REEXEC"] = "1"
-    env["VIRTUAL_ENV"] = str(venv_python.parent.parent)
+    env["VIRTUAL_ENV"] = venv_root
     os.execve(str(venv_python), [str(venv_python), *sys.argv], env)
 
 
@@ -28,6 +30,7 @@ _reexec_with_venv_python()
 import argparse
 import logging
 import signal
+import threading
 import time
 
 from logging_setup import setup_logging
@@ -42,15 +45,20 @@ from video_streamer import VideoStreamer
 from metrics import global_metrics
 from network_controller import start_network_monitor
 from vpn_manager import VPNManager
+from cloud_egress import wait_for_cloud_egress
+from camera_mavlink import start_camera_mavlink_bridge
+from landing_mavlink import start_landing_mavlink_bridge
 
 logger = logging.getLogger("MAIN")
 
 video_streamer = None
 vpn_manager = None
+_stop_event = threading.Event()
 
 
 def signal_handler(sig, frame):
     logger.info("Shutting down...")
+    _stop_event.set()
     if video_streamer:
         video_streamer.stop()
     if vpn_manager:
@@ -88,9 +96,12 @@ def main():
         cfg.auth.get("shared_secret"),
         cfg.auth.get("keepalive_interval", 30),
     )
+    auth.set_registration_meta(
+        int(cfg.auth.get("vehicle_type", 0) or 0),
+        str(cfg.auth.get("model", "") or ""),
+    )
 
     vpn_manager = VPNManager(cfg)
-
     drone_uuid = str(cfg.auth.get("uuid") or "")
 
     if args.register:
@@ -115,7 +126,7 @@ def main():
                 drone_uuid,
             )
             vpn_manager.invalidate_config()
-        elif vpn_manager.config_exists():
+        elif vpn_manager.config_exists() or vpn_manager.is_running():
             try:
                 vpn_manager.start()
                 logger.info("[VPN] Tunnel ready — assigned %s", vpn_manager.get_assigned_ip())
@@ -123,11 +134,16 @@ def main():
                 logger.warning("[VPN] Could not start existing tunnel: %s", exc)
 
     fwd = Forwarder(cfg, auth, vpn_manager=vpn_manager)
-
     start_server(cfg.web.get("port", 8080), fwd.stats, auth, forwarder=fwd, cfg=cfg)
     start_network_monitor()
 
-    logger.info("Authenticating via public TCP...")
+    iface, ip, ready = wait_for_cloud_egress(120.0)
+    if ready:
+        logger.info("[STARTUP] Cloud egress ready: %s (%s)", iface, ip)
+    else:
+        logger.warning("[STARTUP] cloud_ready not confirmed — auth will retry until uplink is OK")
+
+    logger.info("[STARTUP] Authenticating with router server (auth before VPN)...")
     if not auth.start():
         logger.warning("Initial authentication failed. Will retry in background.")
     else:
@@ -142,8 +158,6 @@ def main():
                     logger.info("[VPN] Tunnel up — %s (UUID=%s)", vpn_manager.get_assigned_ip(), drone_uuid)
                 except Exception as exc:
                     logger.error("[VPN] wg-quick failed: %s", exc)
-                    logger.error("[VPN] Cài: sudo apt install -y wireguard-tools")
-                    logger.error("[VPN] Và cấp sudo NOPASSWD cho wg-quick (hoặc chạy main.py bằng root)")
             else:
                 logger.error("[VPN] Provision failed — MAVLink sẽ không lên server")
         elif not vpn_manager.is_running():
@@ -162,6 +176,21 @@ def main():
         logger.fatal("Failed to start forwarder")
         sys.exit(1)
 
+    start_camera_mavlink_bridge(cfg, fwd, _stop_event)
+    start_landing_mavlink_bridge(cfg, fwd, _stop_event)
+
+    if cfg.camera.get("enabled") and cfg.camera.get("auto_start"):
+        try:
+            from web.camera_service import camera_restart
+
+            result, code = camera_restart(cfg)
+            if result.get("success"):
+                logger.info("[CAMERA] Auto-start OK: %s", result.get("message", "started"))
+            else:
+                logger.warning("[CAMERA] Auto-start failed: %s", result.get("message"))
+        except Exception as exc:
+            logger.warning("[CAMERA] Auto-start error: %s", exc)
+
     video_cfg = cfg.video if hasattr(cfg, "video") else {}
     if str(video_cfg.get("source", "picamera")).lower() not in ("none", "off", "disabled"):
         video_streamer = VideoStreamer(cfg)
@@ -171,7 +200,7 @@ def main():
 
     logger.info("UAVLink-Edge running. Press Ctrl+C to stop.")
 
-    while True:
+    while not _stop_event.is_set():
         time.sleep(1)
 
 

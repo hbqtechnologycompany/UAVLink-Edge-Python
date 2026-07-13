@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 
 from auth_apikey import (
     RESULT_SUCCESS,
+    api_key_error_message,
     parse_api_key_delete_ack,
     parse_api_key_response,
     parse_api_key_revoke_ack,
@@ -44,9 +45,12 @@ class AuthClient:
         self.drone_uuid = drone_uuid
         self.shared_secret = shared_secret
         self.secret_key = ""
+        self.api_key = ""
         self.session_token = ""
         self.expires_at = 0
         self.refresh_interval = keepalive_interval
+        self.vehicle_type = 0
+        self.model = ""
         self.conn: Optional[socket.socket] = None
         self.running = False
         self.lock = threading.Lock()
@@ -77,10 +81,30 @@ class AuthClient:
             return False
 
         self.secret_key = data.get("secret_key", "")
+        self.api_key = str(data.get("api_key") or "")
         if not self.secret_key:
             return False
         logger.info("Loaded secret key from storage")
         return True
+
+    def _save_secret_file(self, data: dict) -> None:
+        secret_file = self._secret_path()
+        with open(secret_file, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        os.chmod(secret_file, 0o600)
+
+    def _persist_api_key(self, api_key: str, expires_at: int = 0) -> None:
+        data = {"secret_key": self.secret_key, "uuid": self.drone_uuid}
+        secret_file = self._secret_path()
+        if os.path.exists(secret_file):
+            with open(secret_file, encoding="utf-8") as f:
+                data = json.load(f)
+        data["api_key"] = api_key
+        data["uuid"] = self.drone_uuid
+        if expires_at:
+            data["api_key_expires_at"] = expires_at
+        self._save_secret_file(data)
+        self.api_key = api_key
 
     def connect(self):
         try:
@@ -327,8 +351,21 @@ class AuthClient:
         uuid_bytes = self.drone_uuid.encode('utf-8')
         return struct.pack("<BH", self.MSG_SESSION_REFRESH, len(token_bytes)) + token_bytes + \
                struct.pack("<H", len(uuid_bytes)) + uuid_bytes
+    def set_registration_meta(self, vehicle_type: int = 0, model: str = "") -> None:
+        self.vehicle_type = int(vehicle_type or 0) & 0xFF
+        self.model = str(model or "")[:32]
+
+    @staticmethod
+    def _serialize_register_init(uuid: str, vehicle_type: int, model: str) -> bytes:
+        uuid_bytes = uuid.encode("utf-8")
+        model_bytes = model.encode("utf-8")[:32]
+        packet = struct.pack("<BH", AuthClient.MSG_REGISTER_INIT, len(uuid_bytes)) + uuid_bytes
+        if vehicle_type != 0 or model_bytes:
+            packet += struct.pack("BB", vehicle_type & 0xFF, len(model_bytes)) + model_bytes
+        return packet
+
     def register(self):
-        """One-time registration via REGISTER_INIT (0xA0) — Pi_CM5 parity."""
+        """One-time registration via REGISTER_INIT (0xA0) — v2 when vehicle_type/model set."""
         if not self.shared_secret:
             logger.error("shared_secret is required for registration")
             return False
@@ -336,10 +373,17 @@ class AuthClient:
             return False
 
         try:
-            uuid_bytes = self.drone_uuid.encode("utf-8")
-            packet = struct.pack("<BH", self.MSG_REGISTER_INIT, len(uuid_bytes)) + uuid_bytes
+            packet = self._serialize_register_init(self.drone_uuid, self.vehicle_type, self.model)
             self.conn.sendall(packet)
-            logger.info("Sent REGISTER_INIT (UUID=%s)", self.drone_uuid)
+            if self.vehicle_type or self.model:
+                logger.info(
+                    "Sent REGISTER_INIT v2 (UUID=%s, vehicle_type=%d, model=%r)",
+                    self.drone_uuid,
+                    self.vehicle_type,
+                    self.model,
+                )
+            else:
+                logger.info("Sent REGISTER_INIT (UUID=%s)", self.drone_uuid)
 
             self.conn.settimeout(15)
             data = self.conn.recv(4096)
@@ -359,6 +403,7 @@ class AuthClient:
                 hashlib.sha256,
             ).digest()
 
+            uuid_bytes = self.drone_uuid.encode("utf-8")
             resp_packet = struct.pack("<BH", self.MSG_REGISTER_RESPONSE, len(uuid_bytes)) + uuid_bytes
             resp_packet += struct.pack("<H", len(signature)) + signature
             resp_packet += struct.pack("<Q", timestamp)
@@ -381,9 +426,7 @@ class AuthClient:
                 return False
 
             secret_file = self._secret_path()
-            with open(secret_file, "w", encoding="utf-8") as f:
-                json.dump({"secret_key": secret_key, "uuid": self.drone_uuid}, f)
-            os.chmod(secret_file, 0o600)
+            self._save_secret_file({"secret_key": secret_key, "uuid": self.drone_uuid})
 
             vpn_config = Path("vpn_config.json")
             if vpn_config.exists():
@@ -395,6 +438,26 @@ class AuthClient:
             self.expires_at = 0
             logger.info("Registration successful. SecretKey saved to %s", secret_file)
             global_metrics.add_log("INFO", f"Registered with fleet server (UUID={self.drone_uuid})")
+
+            # API key (CLIENT API KEY) do fleet server cấp — lấy qua STATUS (0x24), không tạo mới (0x20).
+            try:
+                if self.authenticate():
+                    self.running = True
+                    state = self.sync_api_key_from_server()
+                    if state.get("api_key"):
+                        logger.info("API key received from fleet server")
+                    elif state.get("status") == "backend_error":
+                        logger.warning(
+                            "Fleet backend chưa trả API key — kiểm tra drone trên Admin UI hoặc thử đồng bộ sau"
+                        )
+            except Exception as exc:
+                logger.warning("Could not sync API key after registration: %s", exc)
+            finally:
+                self.running = False
+                if self.conn:
+                    self.conn.close()
+                    self.conn = None
+
             return True
 
         except Exception as e:
@@ -484,15 +547,23 @@ class AuthClient:
                     time.sleep(retry_delay)
         raise RuntimeError(str(last_error))
 
+    def sync_api_key_from_server(self) -> dict:
+        """Lấy CLIENT API KEY đã được fleet server cấp (MSG_API_KEY_STATUS 0x24)."""
+        state = self.get_api_key_status()
+        api_key = state.get("api_key") or ""
+        if state.get("has_active_key") and api_key:
+            self._persist_api_key(api_key, int(state.get("expires_at") or 0))
+        return state
+
     def request_api_key(self, expiration_hours: int) -> dict:
         expiration_hours = max(1, min(720, int(expiration_hours)))
         packet = serialize_api_key_request(self.drone_uuid, self.session_token, expiration_hours)
         resp = self._exchange_tcp(packet, parse_api_key_response)
         if resp.result != RESULT_SUCCESS:
-            if resp.error_code == 0x01:
-                raise RuntimeError("drone already has an active API key")
             if resp.error_code:
-                raise RuntimeError(f"API key request failed (error code: 0x{resp.error_code:02x})")
+                raise RuntimeError(
+                    f"API key request failed: {api_key_error_message(resp.error_code)}"
+                )
             raise RuntimeError("API key request failed")
         global_metrics.add_log("INFO", "API key generated successfully")
         return {
