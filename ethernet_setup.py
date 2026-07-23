@@ -99,3 +99,49 @@ def ensure_ethernet_ready(config) -> bool:
         port,
     )
     return True
+
+
+def start_ethernet_watchdog(config, stop_event, interval: float = 5.0) -> None:
+    """Re-apply ethernet.local_ip if lost after boot/reset (NetworkManager may drop it)."""
+    import threading
+    import time
+
+    network = getattr(config, "network", {}) or {}
+    conn_type = normalize_connection_type(network.get("connection_type", "serial"))
+    if conn_type not in ("ethernet", "prefer_ethernet"):
+        return
+
+    eth = getattr(config, "ethernet", {}) or {}
+    local_ip = str(eth.get("local_ip") or "").strip()
+    if not local_ip or not eth.get("auto_setup", False):
+        return
+
+    configured = str(eth.get("interface") or "eth0")
+    iface = resolve_interface(configured)
+
+    def _loop() -> None:
+        had_ip = iface_has_ip(iface, local_ip)
+        while not stop_event.is_set():
+            try:
+                has_ip = iface_has_ip(iface, local_ip)
+                if not has_ip:
+                    if had_ip:
+                        logger.warning(
+                            "[NETWORK] %s lost %s — re-applying static IP",
+                            iface,
+                            local_ip,
+                        )
+                    if ensure_ethernet_ready(config):
+                        if not had_ip:
+                            logger.info("[NETWORK] %s restored to %s", iface, local_ip)
+                        had_ip = True
+                    else:
+                        had_ip = False
+                else:
+                    had_ip = True
+            except Exception as exc:
+                logger.warning("[NETWORK] Ethernet watchdog error: %s", exc)
+            stop_event.wait(interval)
+
+    threading.Thread(target=_loop, daemon=True, name="ethernet-watchdog").start()
+    logger.info("[NETWORK] Ethernet watchdog started (%s → %s every %.0fs)", iface, local_ip, interval)

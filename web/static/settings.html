@@ -2118,26 +2118,34 @@ Loading GPS information...
             fetch('/api/status')
                 .then(response => response.json())
                 .then(data => {
+                    const t = data.telemetry || {};
                     const diag = data.mavlink_diagnostics || {};
-                    const fix = Number(data.gps_fix ?? diag.gps_fix_type ?? 0);
-                    const sats = Number(data.satellites ?? diag.gps_satellites ?? 0);
-                    const lock = data.gps_lock || diag.diagnosis || 'NO GPS';
+                    const fix = Number(t.gps_fix ?? data.gps_fix ?? diag.gps_fix_type ?? 0);
+                    const sats = Number(t.satellites ?? data.satellites ?? diag.gps_satellites ?? 0);
+                    const lock = t.gps_lock || data.gps_lock || diag.diagnosis || 'NO GPS';
                     const hasFix = fix >= 3 && sats > 0;
                     const hint = diag.hint || '';
+                    const lat = t.latitude_deg ?? data.latitude_deg;
+                    const lon = t.longitude_deg ?? data.longitude_deg;
+                    const hdop = t.hdop ?? data.hdop;
+                    const alt = t.altitude_m ?? data.altitude_m;
+                    const speed = t.speed_ms ?? data.speed_ms;
+                    const heading = t.heading_deg ?? data.heading_deg;
+                    const pixhawkConnected = data.pixhawk_connected ?? t.connected ?? false;
 
                     output.textContent = 'Thông tin GPS (PX4 / MAVLink):\n\n';
                     output.textContent += `Trạng thái: ${hasFix ? '✓' : '✗'} ${lock}\n`;
                     output.textContent += `Số vệ tinh: ${sats}\n`;
-                    output.textContent += `HDOP: ${data.hdop ? Number(data.hdop).toFixed(1) : 'N/A'}\n`;
-                    output.textContent += `Vĩ độ: ${formatLatDeg(data.latitude_deg)}\n`;
-                    output.textContent += `Kinh độ: ${formatLonDeg(data.longitude_deg)}\n`;
-                    output.textContent += `Độ cao: ${data.altitude_m !== undefined ? Number(data.altitude_m).toFixed(1) + 'm' : 'N/A'}\n`;
-                    output.textContent += `Tốc độ: ${data.speed_ms !== undefined ? Number(data.speed_ms).toFixed(1) + ' m/s' : 'N/A'}\n`;
-                    output.textContent += `Compass: ${data.heading_deg !== undefined ? Number(data.heading_deg).toFixed(1) + '°' : 'N/A'}\n`;
+                    output.textContent += `HDOP: ${hdop !== undefined && hdop !== null ? Number(hdop).toFixed(1) : 'N/A'}\n`;
+                    output.textContent += `Vĩ độ: ${formatLatDeg(lat)}\n`;
+                    output.textContent += `Kinh độ: ${formatLonDeg(lon)}\n`;
+                    output.textContent += `Độ cao: ${alt !== undefined && alt !== null ? Number(alt).toFixed(1) + 'm' : 'N/A'}\n`;
+                    output.textContent += `Tốc độ: ${speed !== undefined && speed !== null ? Number(speed).toFixed(1) + ' m/s' : 'N/A'}\n`;
+                    output.textContent += `Compass: ${heading !== undefined && heading !== null ? Number(heading).toFixed(1) + '°' : 'N/A'}\n`;
                     if (hint) {
                         output.textContent += `\nGhi chú: ${hint}\n`;
                     }
-                    if (!data.pixhawk_connected) {
+                    if (!pixhawkConnected) {
                         output.textContent += '\n⚠ Chưa kết nối Pixhawk — không có telemetry thật.\n';
                     }
 

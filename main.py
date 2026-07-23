@@ -46,7 +46,7 @@ from metrics import global_metrics
 from network_controller import start_network_monitor
 from vpn_manager import VPNManager
 from cloud_egress import wait_for_cloud_egress
-from ethernet_setup import ensure_ethernet_ready
+from ethernet_setup import ensure_ethernet_ready, start_ethernet_watchdog
 from instance_lock import acquire_instance_lock
 from camera_mavlink import start_camera_mavlink_bridge
 from landing_mavlink import start_landing_mavlink_bridge
@@ -145,6 +145,7 @@ def main():
     # Eth + MAVLink trước cloud auth — Pixhawk/GCS local không chờ VPN.
     if not ensure_ethernet_ready(cfg):
         logger.warning("[STARTUP] Ethernet not ready — forwarder will retry serial if configured")
+    start_ethernet_watchdog(cfg, _stop_event)
 
     if not fwd.start():
         logger.fatal("Failed to start forwarder")

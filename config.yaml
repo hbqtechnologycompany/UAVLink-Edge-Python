@@ -2,7 +2,7 @@ auth:
   enabled: true
   host: 45.117.171.237
   port: 5770
-  uuid: 0000000f-0000-0000-0000-00000000000f
+  uuid: 00000010-0000-0000-0000-000000000010
   shared_secret: drone-fleet-shared-secret-auth-key-2025
   keepalive_interval: 30
   session_heartbeat_frequency: 1.0
@@ -21,6 +21,7 @@ network:
   mode: prefer_4g
   cloud_wifi_fallback: false
   forward_gps_raw_int: false
+  global_position_hz: 5.0
   fallback_delay: 300
 ethernet:
   interface: eth0
@@ -70,12 +71,12 @@ camera:
     brightness: 0.0
     contrast: 1.0
     exposure_time: 0
-    detection_enabled: true
-    overlay_enabled: true
+    detection_enabled: false
+    overlay_enabled: false
     keyframe_interval: 30
     preset: ultrafast
     tune: zerolatency
-    overlay_burn_enabled: true
+    overlay_burn_enabled: false
     landing_detection_mode: aruco
     aruco_dictionary: DICT_4X4_50
     gate_timeout_ms: 0
@@ -118,6 +119,7 @@ camera:
     lores_size:
     - 320
     - 240
+    detection_lost_hold_ms: 1500
 landing:
   environment: outdoor
   marker_type: H

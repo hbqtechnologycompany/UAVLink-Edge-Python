@@ -2,7 +2,11 @@ from setuptools import setup
 from setuptools.command.develop import develop as _develop
 from setuptools.command.install import install as _install
 
-from _apt import apt_install
+try:
+    from _apt import apt_install
+except ImportError:
+    def apt_install() -> bool:
+        return True
 
 
 class Install(_install):

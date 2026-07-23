@@ -50,25 +50,28 @@ def _stream_config_path(camera_id: int) -> Path:
 
 
 def _streamer_python() -> str:
-    """Picamera2 on Pi is apt-only — always prefer system python3 (Pi_CM5 behaviour)."""
+    """Prefer system python3 with both picamera2 (apt) and cv2 (apt/venv)."""
     candidates: List[str] = []
     for exe in ("/usr/bin/python3", "python3", sys.executable):
         if exe and exe not in candidates:
             candidates.append(exe)
-    for exe in candidates:
-        try:
-            probe = subprocess.run(
-                [exe, "-c", "import picamera2"],
-                capture_output=True,
-                timeout=20,
-            )
-            if probe.returncode == 0:
-                logger.info("[CAMERA] Streamer interpreter: %s", exe)
-                return exe
-        except (OSError, subprocess.TimeoutExpired):
-            continue
+    # Prefer interpreter that has BOTH picamera2 + cv2 (streamer imports both).
+    for require in ("import picamera2, cv2", "import picamera2"):
+        for exe in candidates:
+            try:
+                probe = subprocess.run(
+                    [exe, "-c", require],
+                    capture_output=True,
+                    timeout=20,
+                )
+                if probe.returncode == 0:
+                    logger.info("[CAMERA] Streamer interpreter: %s (%s)", exe, require)
+                    return exe
+            except (OSError, subprocess.TimeoutExpired):
+                continue
     logger.warning(
-        "[CAMERA] picamera2 không có — stream sẽ lỗi. Chạy: sudo apt install -y python3-picamera2"
+        "[CAMERA] picamera2/cv2 thiếu — stream sẽ lỗi. "
+        "Chạy: sudo apt install -y python3-picamera2 python3-opencv"
     )
     return "/usr/bin/python3" if Path("/usr/bin/python3").is_file() else sys.executable
 

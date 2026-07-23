@@ -111,7 +111,7 @@
             { id: 'network', icon: 'wifi', src: 'connect.html' }
         ]},
         { sectionKey: 'device', items: [
-            { id: 'hardware', icon: 'cpu', src: 'settings.html?v=camcm5-2' }
+            { id: 'hardware', icon: 'cpu', src: 'settings.html?v=gps-fix-1' }
         ]},
         { sectionKey: 'security', items: [
             { id: 'tokens', icon: 'shield', src: 'tokens.html' }

@@ -49,6 +49,10 @@ class TelemetryCache:
         self.gps_fix = 0
         self.satellites = 0
         self.gps_lock = ""
+        self.latitude_deg: Optional[float] = None
+        self.longitude_deg: Optional[float] = None
+        self.hdop: Optional[float] = None
+        self.heading_deg: Optional[float] = None
         self.voltage_v = 0.0
         self.battery_pct = -1.0
 
@@ -68,6 +72,15 @@ class TelemetryCache:
                 self.climb_ms = float(getattr(msg, "climb", 0) or 0)
                 self._touch()
             elif msg_type == "GLOBAL_POSITION_INT":
+                lat = getattr(msg, "lat", None)
+                lon = getattr(msg, "lon", None)
+                if lat is not None:
+                    self.latitude_deg = float(lat) / 1e7
+                if lon is not None:
+                    self.longitude_deg = float(lon) / 1e7
+                hdg = getattr(msg, "hdg", None)
+                if hdg is not None and int(hdg) != 65535:
+                    self.heading_deg = float(hdg) / 100.0
                 rel_alt = getattr(msg, "relative_alt", None)
                 if rel_alt is not None:
                     self.altitude_m = float(rel_alt) / 1000.0
@@ -79,6 +92,21 @@ class TelemetryCache:
                 self.gps_fix = int(getattr(msg, "fix_type", 0) or 0)
                 self.satellites = int(getattr(msg, "satellites_visible", 0) or 0)
                 self.gps_lock = _gps_fix_label(self.gps_fix, self.satellites)
+                lat = getattr(msg, "lat", None)
+                lon = getattr(msg, "lon", None)
+                if lat is not None:
+                    self.latitude_deg = float(lat) / 1e7
+                if lon is not None:
+                    self.longitude_deg = float(lon) / 1e7
+                eph = getattr(msg, "eph", None)
+                if eph is not None and int(eph) != 65535:
+                    self.hdop = float(eph) / 100.0
+                cog = getattr(msg, "cog", None)
+                if cog is not None and int(cog) != 65535:
+                    self.heading_deg = float(cog) / 100.0
+                alt_mm = getattr(msg, "alt", None)
+                if alt_mm is not None and int(alt_mm) != -1:
+                    self.altitude_m = float(alt_mm) / 1000.0
                 self._touch()
             elif msg_type == "SYS_STATUS":
                 vb = getattr(msg, "voltage_battery", None)
@@ -106,6 +134,10 @@ class TelemetryCache:
                 "gps_fix": self.gps_fix if valid else 0,
                 "satellites": self.satellites if valid else 0,
                 "gps_lock": self.gps_lock if valid else "",
+                "latitude_deg": self.latitude_deg if valid else None,
+                "longitude_deg": self.longitude_deg if valid else None,
+                "hdop": self.hdop if valid else None,
+                "heading_deg": self.heading_deg if valid else None,
                 "voltage_v": self.voltage_v if valid else 0.0,
                 "battery_pct": self.battery_pct if valid else -1.0,
                 "last_update": self.last_update.isoformat() if self.last_update else None,

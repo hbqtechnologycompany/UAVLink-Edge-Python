@@ -11,8 +11,12 @@ from pymavlink import mavutil
 from mavlink_utils import (
     MAVLINK_PATH_ETHERNET,
     MAVLINK_PATH_SERIAL,
+    MSG_GLOBAL_POSITION_INT,
     is_pixhawk_heartbeat,
     normalize_connection_type,
+    pack_global_position_int,
+    request_message_interval,
+    request_message_interval_udp,
 )
 from mavlink_custom import (
     COMP_ONBOARD,
@@ -84,6 +88,15 @@ class Forwarder:
         self._gps_fix_type = 0
         self._gps_satellites = 0
         self._local_pos_last_at: Optional[datetime] = None
+        self._global_pos_last_at: Optional[datetime] = None
+        self._global_pos_stream_at = 0.0
+        self._global_pos_stream_lock = threading.Lock()
+        self._global_pos_uplink_seq = 0
+        self._global_pos_from_px4 = False
+        self._global_pos_bridge_logged = False
+        self._last_gps_msg = None
+        self._last_local_ned = None
+        self._stats_lock_extra = threading.Lock()
         self._hb_seq = 0
         self._companion_seq = 0
         self._mavlink_ka_seq = 0
@@ -221,7 +234,19 @@ class Forwarder:
             name="forwarder-companion-status",
         ).start()
         if not forward_gps_raw_int(self.network):
-            logger.info("[MAVLINK] GPS_RAW_INT uplink OFF — server uses EKF/global position only")
+            logger.info(
+                "[MAVLINK] GPS_RAW_INT uplink OFF — requesting GLOBAL_POSITION_INT for EKF uplink"
+            )
+            threading.Thread(
+                target=self._global_position_watchdog_loop,
+                daemon=True,
+                name="forwarder-global-position-watchdog",
+            ).start()
+            threading.Thread(
+                target=self._global_position_uplink_loop,
+                daemon=True,
+                name="forwarder-global-position-uplink",
+            ).start()
         self._start_partner_heartbeat()
         threading.Thread(target=self._path_watchdog_loop, daemon=True, name="forwarder-path-watchdog").start()
         threading.Thread(target=self._ip_monitor_loop, daemon=True, name="forwarder-ip-monitor").start()
@@ -322,8 +347,15 @@ class Forwarder:
             self._gps_last_at = datetime.now(timezone.utc)
             self._gps_fix_type = int(getattr(msg, "fix_type", 0) or 0)
             self._gps_satellites = int(getattr(msg, "satellites_visible", 0) or 0)
+            with self._stats_lock_extra:
+                self._last_gps_msg = msg
         elif msg_type == "LOCAL_POSITION_NED":
             self._local_pos_last_at = datetime.now(timezone.utc)
+            with self._stats_lock_extra:
+                self._last_local_ned = msg
+        elif msg_type == "GLOBAL_POSITION_INT":
+            self._global_pos_last_at = datetime.now(timezone.utc)
+            self._global_pos_from_px4 = True
 
         if msg_type == "HEARTBEAT":
             if not is_pixhawk_heartbeat(msg):
@@ -345,6 +377,8 @@ class Forwarder:
                     active_path,
                 )
                 global_metrics.add_log("INFO", f"Pixhawk connected via {active_path}")
+                if not forward_gps_raw_int(self.network):
+                    self._ensure_global_position_stream(sys_id, force=True)
             bridge.handle_heartbeat(sys_id, active_path)
             return
 
@@ -436,6 +470,129 @@ class Forwarder:
             daemon=True,
             name="partner-heartbeat",
         ).start()
+
+    def _global_position_hz(self) -> float:
+        hz = float(self.network.get("global_position_hz", 5.0) or 5.0)
+        return max(1.0, min(hz, 50.0))
+
+    def _ensure_global_position_stream(self, sys_id: int, *, force: bool = False) -> None:
+        if forward_gps_raw_int(self.network):
+            return
+        now = time.time()
+        with self._global_pos_stream_lock:
+            if not force and now - self._global_pos_stream_at < 10.0:
+                return
+            conn = self._active_conn
+            if conn is None:
+                return
+            hz = self._global_position_hz()
+            ok = request_message_interval(conn, sys_id, MSG_GLOBAL_POSITION_INT, hz)
+            target = self._pixhawk_udp_target()
+            eth_conn = self._connections.get(MAVLINK_PATH_ETHERNET)
+            if target and eth_conn is not None and hasattr(eth_conn, "port"):
+                ok = request_message_interval_udp(
+                    eth_conn.port, target, sys_id, MSG_GLOBAL_POSITION_INT, hz
+                ) or ok
+            if ok:
+                self._global_pos_stream_at = now
+                logger.info(
+                    "[MAVLINK] Requested GLOBAL_POSITION_INT @ %.1f Hz (sys=%s, EKF uplink)",
+                    hz,
+                    sys_id,
+                )
+                global_metrics.add_log(
+                    "INFO",
+                    f"Requested GLOBAL_POSITION_INT @ {hz:.1f} Hz for EKF uplink",
+                )
+
+    def _global_position_watchdog_loop(self) -> None:
+        while self.running:
+            if (
+                not forward_gps_raw_int(self.network)
+                and self._pixhawk_connected.is_set()
+            ):
+                stale = True
+                if self._global_pos_last_at is not None:
+                    stale = (
+                        datetime.now(timezone.utc) - self._global_pos_last_at
+                    ).total_seconds() > 10.0
+                elif self._global_pos_stream_at <= 0:
+                    stale = True
+                else:
+                    stale = time.time() - self._global_pos_stream_at > 15.0
+                if stale:
+                    self._ensure_global_position_stream(
+                        self._pixhawk_sys_id or 1,
+                        force=True,
+                    )
+            time.sleep(5)
+
+    def _global_position_uplink_loop(self) -> None:
+        """Uplink GLOBAL_POSITION_INT for EKF mode without forwarding GPS_RAW_INT."""
+        while self.running:
+            if forward_gps_raw_int(self.network):
+                time.sleep(1.0)
+                continue
+            interval = 1.0 / self._global_position_hz()
+            if (
+                not self._pixhawk_connected.is_set()
+                or not self.server_sock
+                or not self.auth_client.session_token
+                or not self._vpn_ready()
+                or not self._is_healthy
+            ):
+                time.sleep(interval)
+                continue
+
+            now = datetime.now(timezone.utc)
+            if (
+                self._global_pos_from_px4
+                and self._global_pos_last_at is not None
+                and (now - self._global_pos_last_at).total_seconds() <= 2.0
+            ):
+                time.sleep(interval)
+                continue
+
+            if (
+                self._gps_last_at is None
+                or (now - self._gps_last_at).total_seconds() > 3.0
+            ):
+                time.sleep(interval)
+                continue
+
+            with self._stats_lock_extra:
+                gps_msg = self._last_gps_msg
+                local_msg = self._last_local_ned
+            if gps_msg is None or int(getattr(gps_msg, "fix_type", 0) or 0) < 2:
+                time.sleep(interval)
+                continue
+
+            sys_id = self._pixhawk_sys_id or 1
+            try:
+                frame = pack_global_position_int(
+                    sys_id,
+                    self._global_pos_uplink_seq,
+                    gps_msg,
+                    local_msg,
+                )
+                self.server_sock.sendto(frame, self.target_addr)
+                self._global_pos_uplink_seq = (self._global_pos_uplink_seq + 1) & 0xFF
+                if not self._global_pos_bridge_logged:
+                    self._global_pos_bridge_logged = True
+                    logger.info(
+                        "[MAVLINK] GLOBAL_POSITION_INT uplink via GPS_RAW_INT bridge "
+                        "(GPS_RAW_INT stays local; PX4 EKF global not streamed)"
+                    )
+                self._note_out_server(frame)
+                global_metrics.inc_sent("GLOBAL_POSITION_INT")
+                global_metrics.inc_sent("outServer")
+                with self.stats_lock:
+                    self.stats["accepted"] += 1
+                    self.stats["outServer"] += 1
+            except OSError as exc:
+                global_metrics.inc_failed_send("GLOBAL_POSITION_INT")
+                global_metrics.add_log("ERROR", f"GLOBAL_POSITION_INT uplink failed: {exc}")
+            time.sleep(interval)
 
     def _partner_heartbeat_loop(self, sock: socket.socket, pixhawk_ip: str, pixhawk_port: int) -> None:
         """Share pymavlink UDP socket — PX4 unicast goes to same bind as listener (Pi pixhawk_udp.go)."""

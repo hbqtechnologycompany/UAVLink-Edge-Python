@@ -37,11 +37,12 @@ def ensure_venv() -> Path:
 
 
 def install_pip(python: Path, pip_only: bool = False) -> None:
+    if not pip_only:
+        install_apt_only()
     if _run([str(python), "-m", "pip", "install", "--upgrade", "pip"]) != 0:
         sys.exit(1)
     env = os.environ.copy()
-    if pip_only:
-        env["UAVLINK_SKIP_APT"] = "1"
+    env["UAVLINK_SKIP_APT"] = "1"
     if _run([str(python), "-m", "pip", "install", "-r", str(REQUIREMENTS)], env=env) != 0:
         sys.exit(1)
 
